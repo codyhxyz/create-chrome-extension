@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Screenshot pages render at exactly 1280×800. We pin the viewport so that
+ * manual-preview (a dev viewing at arbitrary window size) matches what the
+ * headless Playwright capture sees.
+ */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: #1a1a1a;
+  color: #fff;
+  font-family: inherit;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* The capture script sets viewport to 1280×800 and screenshots the
+ * document. We hard-pin frame dimensions in the component so that the PNG is
+ * always exactly 1280×800 regardless of scrollbars. */
+.screenshot-stage {
+  width: 1280px;
+  height: 800px;
+  overflow: hidden;
+}

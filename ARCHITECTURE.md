@@ -25,7 +25,8 @@ The user (human or AI) interacts with a small, opinionated set of commands. Each
 |---|---|---|---|
 | `npm run compile` | manual, CI | TypeScript correctness | ✓ green |
 | `npm run check:cws` | every push to CI | well-formed extension structure (13 rules) | ✓ green |
-| `npm run check:cws:ship` | manual | structural + listing/welcome content filled in (16 rules; 1 opt-in) | ✗ red (by design) |
+| `npm run check:cws:ship` | manual | structural + listing/welcome/screenshots content filled in (17 rules; `listing-drift` is opt-in on CWS secrets) | ✗ red (by design) |
+| `npm run screenshots` | manual | renders 1280×800 CWS screenshots from `screenshots/config.ts` to `.output/screenshots/` | runs, but shots are factory placeholders until config is customized |
 | `npm run zip` | manual, to package for CWS upload | **gated on `check:cws:ship`** — no zip is produced until ship is green | ✗ refuses (by design) |
 | `npm run version-sync` | manual, inside `ship` | local `package.json` version > live CWS version | ✓ skips cleanly without CWS secrets |
 | `npm run ship` | manual, to publish to CWS | `check:cws:ship` → `version-sync` → `wxt zip` → `publish-cws` | halts at first red gate; publish step is opt-in on secrets |
@@ -165,8 +166,8 @@ Each of these follows the principle above: the deterministic piece lives in a sc
 | ~~`npm run ship`~~ | Gate | **Done (Session 1).** `check:cws:ship && version-sync && wxt zip && publish-cws`. First halt wins. |
 | ~~`listing-drift` validator rule~~ | Script rule | **Done (Session 1).** Warn-severity; ship-only; returns `[]` without secrets (factory invariant preserved). |
 | `cws-ship` skill | Skill | Orchestrates the full submission flow using `--json` output. Maps each rule id to a conversational fix recipe. |
-| `cws-content` skill | Skill | **Done (Session 2).** Lives at `/skills/cws-content/SKILL.md`. Elicits name, description, value prop, justifications, privacy policy URL. Writes to `wxt.config.ts` + `entrypoints/welcome/config.ts`. Runs validator to confirm. See "Skill conventions" above for the `/skills/<name>/SKILL.md` layout Sessions 3-5 will follow. |
-| `cws-screens` skill + repo infrastructure | Skill + Script | Next.js page with browser-chrome frame, 1280×800 export. Distinct from the iOS `app-store-screenshots` skill. Separate conversation — screenshots iterate independently of listing copy. |
+| ~~`cws-content` skill~~ | Skill | **Done (Session 2).** Lives at `/skills/cws-content/SKILL.md`. Elicits name, description, value prop, justifications, privacy policy URL. Writes to `wxt.config.ts` + `entrypoints/welcome/config.ts`. Runs validator to confirm. See "Skill conventions" above for the `/skills/<name>/SKILL.md` layout Sessions 3/5 will follow. |
+| ~~`cws-screens` skill + repo infrastructure~~ | Skill + Script | **Done (Session 4).** Skill at `skills/cws-screens/SKILL.md`; subproject at `screenshots/` (Next.js); validator rule `ship-ready-screenshots`; one-shot command `npm run screenshots`. Distinct from the iOS `app-store-screenshots` skill. |
 | `cws-init` skill | Skill | First-time setup: clone, name, OAuth secrets walkthrough, first `cws-content` pass. |
 
 ---

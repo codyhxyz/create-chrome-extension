@@ -67,7 +67,7 @@ Profiles: content-script-only, popup-based, side-panel app, full hybrid. See [do
         ▼
    4. BUILD          npm run build  → .output/chrome-mv3/
         ▼
-   5. SCREENSHOTS    /app-store-screenshots skill → marketing/
+   5. SCREENSHOTS    /cws-screens skill → screenshots/ → npm run screenshots
         ▼
    6. ZIP            npm run zip    → uploadable .zip
         ▼
@@ -86,6 +86,7 @@ Profiles: content-script-only, popup-based, side-panel app, full hybrid. See [do
 | `npm run check:cws:ship` | CWS submission-readiness gate (run before `zip`) |
 | `npm run version-sync` | Compare local version to live CWS version (no-ops without CWS secrets) |
 | `npm run ship` | End-to-end publish: `check:cws:ship` → `version-sync` → `wxt zip` → upload & poll (no-ops at publish step without secrets) |
+| `npm run screenshots` | Render 1280×800 CWS screenshots from `screenshots/config.ts` |
 | `npm run capture:source` | Capture a URL into `sources/` with provenance |
 | `npm run index:sources` | Regenerate `sources/_index/*` from capture frontmatter |
 | `npm run dev:firefox` | Dev server for Firefox |
@@ -109,7 +110,7 @@ Capture a new source: `npm run capture:source -- <url> --type=official|forum|blo
 - [Development Workflow](docs/02-development-workflow.md)
 - [Chrome Web Store Submission](docs/03-chrome-web-store-submission.md)
 - [Staleness Prevention](docs/04-staleness-prevention.md)
-- [Launch Materials](docs/05-launch-materials.md) — screenshots via `/app-store-screenshots`
+- [Launch Materials](docs/05-launch-materials.md) — CWS screenshots via `/cws-screens`, iOS via `/app-store-screenshots`
 - [Security](docs/06-security.md)
 - [Useful Patterns](docs/07-useful-patterns.md)
 - [Keepalive Publish](docs/08-keepalive-publish.md)

@@ -1,63 +1,98 @@
 # Launch Materials
 
-## Chrome Web Store Asset Requirements
+Screenshots are the single biggest conversion asset on the Chrome Web Store tile. This doc is the index to the two screenshot pipelines the factory ships.
 
-| Asset | Size | Required? |
-|---|---|---|
-| Screenshots | 1280x800 or 640x400 | Yes (1-5) |
-| Small promo tile | 440x280 | Optional |
-| Marquee promo tile | 1400x560 | Optional |
-| Extension icon | 128x128 | Yes (auto-generated) |
+## Two pipelines, two audiences
+
+| Pipeline | Target | Skill | Repo location |
+|---|---|---|---|
+| **Chrome Web Store screenshots** | Chrome extension listing on CWS | `/cws-screens` | `screenshots/` |
+| **iOS App Store screenshots** | Companion iOS app on the App Store | `/app-store-screenshots` | `marketing/` |
+
+These are **parallel, not interchangeable.** They have different dimensions, different aesthetics, different conversion goals. Don't try to use one for the other.
+
+- **CWS** is desktop, 1280×800, with a browser-chrome frame. Typography is restrained. The screenshot frames an extension surface (popup, sidepanel, options, welcome, or content script on a real page).
+- **App Store** is mobile, iPhone/iPad mockups, with app-advertising typography (large, bold, gradient backgrounds). It frames an iOS app screen.
+
+Most Chrome extensions don't have an iOS app, so for most users only the `/cws-screens` skill is relevant. If you also ship an iOS app, the two skills coexist — `screenshots/` produces your CWS assets, `marketing/` produces your App Store assets, and they don't share components or copy.
 
 ---
 
-## Recommended Workflow: The `app-store-screenshots` Skill
+## Chrome Web Store screenshots (recommended)
 
-The fastest path to polished, on-brand store screenshots is the Claude Code skill:
+### At a glance
 
-```
-/app-store-screenshots
-```
-
-It scaffolds a small Next.js project with `html-to-image` that renders each screenshot from JSX — every asset is version-controlled, reproducible, and easy to iterate on. Run it from the `marketing/` directory (see `marketing/README.md`).
-
-### What to generate
-
-| Asset | Dimensions |
+| Item | Spec |
 |---|---|
-| Store screenshot (hero / thumbnail) | **1280x800** |
-| Additional store screenshots (up to 4 more) | **1280x800** |
-| Marquee promo tile | **1400x560** |
-| Small promo tile | **440x280** |
-
-### Typical screenshot composition
-
-1. **Hero screenshot (thumbnail):** extension visibly active on a real page. This is the one that sells the click.
-2. **Feature callouts:** 2-3 screenshots each highlighting one feature, with annotations (arrows, labels, short captions).
-3. **Light + dark mode:** if your extension supports both, show both.
-4. **Before/after:** if your extension transforms something on the page, show the transformation.
+| Dimensions | **1280×800** (or 640×400; 1280 is strongly preferred) |
+| Count | Up to 5 (target exactly 5 — the dashboard caps there) |
+| First screenshot | Is the thumbnail in search results. Make it the most compelling one. |
+| Format | PNG |
+| Upload | Manual, via the CWS dashboard. No API. |
 
 ### Workflow
 
-1. `cd marketing && /app-store-screenshots` in Claude Code.
-2. Describe your extension and what each screenshot should show.
-3. Edit the generated React components directly to tweak layout, copy, colors, assets.
-4. Run the export script — PNGs land in `marketing/output/`, ready to upload to CWS.
+```
+/cws-screens            # in Claude Code, from the repo root
+```
+
+The skill walks you through 5 shots (one headline + subhead + surface per shot), writes your choices to `screenshots/config.ts`, and generates PNGs via:
+
+```bash
+npm run screenshots
+```
+
+Outputs land in `.output/screenshots/`. Drag them into the CWS dashboard's **Store listing → Screenshots** field when submitting.
+
+### How the pipeline is built
+
+`screenshots/` is a standalone Next.js 15 project that renders each config entry to a dedicated `/[id]` route at 1280×800. A Playwright capture script (`screenshots/capture.ts`) boots the production build headless, visits each route, and writes PNGs.
+
+- `screenshots/config.ts` — the only file you edit. Typed array of screenshot entries.
+- `screenshots/components/BrowserFrame.tsx` — Chrome window chrome (URL bar, tabs, traffic-light buttons, light/dark theme).
+- `screenshots/components/CopyOverlay.tsx` — headline + subhead overlay.
+- `screenshots/components/SurfaceMock.tsx` — placeholder mockups of each surface (popup / sidepanel / options / welcome / content-in-page). Swap these out for your actual rendered surfaces once the extension is real.
+
+The factory ships 5 placeholder entries with obviously-fake copy (`"Your killer feature here"`, `"your-target-site.com"`) so that `npm run check:cws:ship` fails until you customize them. That's the forcing function — see `scripts/validate-cws.ts` rule `ship-ready-screenshots`.
+
+### What makes a good CWS screenshot
+
+- **Show the extension doing something**, not the popup in isolation. A quiet popup is the weakest possible thumbnail.
+- **One feature per screenshot.** Don't crowd.
+- **High-contrast overlay copy.** Assume users scroll past in under a second.
+- **Mix light and dark** if your extension supports both.
+- **First screenshot is the thumbnail.** It must be the most compelling one — treat the other 4 as depth.
+
+### Stripping the pipeline
+
+If you'd rather produce screenshots manually (Figma, CleanShot, whatever) and skip the skill, just delete the `screenshots/` folder. The `ship-ready-screenshots` validator rule no-ops when the folder is missing. You'll still be responsible for producing at least one 1280×800 PNG before submitting.
 
 ---
 
-## Icon
+## iOS App Store screenshots
 
-The 128x128 store icon is auto-generated by `@wxt-dev/auto-icons` from `assets/icon.svg`. To customize:
+Use the `/app-store-screenshots` skill for your **iOS app** (not your Chrome extension). It scaffolds a Next.js + `html-to-image` project under `marketing/` with iPhone/iPad mockups and App Store-scale typography.
 
-1. Replace `assets/icon.svg` with your own SVG (keep it simple — it will be rendered at sizes down to 16x16).
-2. Run `npm run build` — all sizes are generated.
+See `marketing/README.md` for the full workflow.
 
-For a brand-specific marquee or small promo tile, use the same skill workflow at the relevant dimensions.
+Do not invoke `/app-store-screenshots` to generate CWS screenshots — the aesthetic is wrong (phone mockup instead of browser frame) and the dimensions are wrong (Apple requires ~1290×2796 portrait at the current generation; CWS requires 1280×800 landscape).
 
 ---
 
-## Manual Screenshot Process (fallback, no skill)
+## Other CWS assets
+
+| Asset | Dimensions | Required? | Notes |
+|---|---|---|---|
+| Store screenshot | 1280×800 | Yes (1–5) | Handled by `/cws-screens`. |
+| Small promo tile | 440×280 | No | Only shown if CWS features your extension on a category page. |
+| Marquee promo tile | 1400×560 | No | Only shown if CWS features your extension on a banner. |
+| Extension icon | 128×128 | Yes (auto) | Auto-generated from `assets/icon.svg` via `@wxt-dev/auto-icons`. |
+
+If you want promo tiles, add additional routes to `screenshots/` at those dimensions and extend the capture script — the infrastructure already handles variable output dimensions. Or produce them manually.
+
+---
+
+## Manual screenshot process (fallback)
 
 If you can't or don't want to use the skill:
 
@@ -65,29 +100,8 @@ If you can't or don't want to use the skill:
 2. Open a clean Chrome profile (no other extensions, no bookmarks bar).
 3. Navigate to a representative page.
 4. Activate the extension (open popup, trigger content script, etc.).
-5. Take a screenshot at 1280x800. On macOS: `Cmd+Shift+4`, then drag a 1280x800 region — or use a tool like CleanShot that can capture at exact dimensions.
-6. Annotate in Figma / Canva / Excalidraw if you want callouts.
+5. Take a screenshot at exactly **1280×800**. On macOS: use CleanShot with a 1280×800 region, or `Cmd+Shift+4` with careful dragging.
+6. Optionally annotate in Figma / Canva / Excalidraw.
+7. Save to `.output/screenshots/` so the `ship-ready-screenshots` validator rule sees it.
 
-This path is slower, less reproducible, and harder to keep consistent across screenshots. Prefer the skill.
-
----
-
-## Tips for Good Screenshots
-
-- **Show the extension doing something**, not the popup in isolation. A quiet popup screenshot is the weakest possible thumbnail.
-- **First screenshot is the thumbnail** in search results. It must be the most compelling one.
-- **High contrast copy on overlays** — assume users are scrolling past fast.
-- **One feature per screenshot.** Don't crowd.
-- **Keep the browser chrome clean** — hide bookmarks bar, hide other extensions, neutral tab title.
-- **Dark mode screenshot last** if supported — CWS shows them in order.
-
----
-
-## Promotional Tiles (Optional)
-
-Used if the CWS editorial team features your extension:
-
-- **Small promo tile (440x280):** category pages
-- **Marquee promo tile (1400x560):** featured banners
-
-Keep these simple: extension name, icon, one-line value prop, clean visual. Generate them in the same skill-driven Next.js project by adding components at those exact dimensions.
+This is slower, less reproducible, and harder to keep consistent across 5 shots. Prefer the skill.

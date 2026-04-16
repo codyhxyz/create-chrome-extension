@@ -613,6 +613,76 @@ async function listingDrift(ctx: Context): Promise<Finding[]> {
   return findings;
 }
 
+// Ship-only: the `screenshots/` subproject is the declarative CWS screenshot
+// generator (see `screenshots/config.ts`). Two things must be true before
+// submission:
+//   1. `screenshots/config.ts` no longer contains factory-default placeholders.
+//   2. `.output/screenshots/` exists and contains at least one `.png`.
+// If the user deleted `screenshots/` entirely (chose to ship without it), the
+// rule no-ops — returning [] — so the factory invariant holds for that profile.
+const SCREENSHOTS_CONFIG_PATH = join(ROOT, 'screenshots', 'config.ts');
+const SCREENSHOTS_OUTPUT_DIR = join(ROOT, '.output', 'screenshots');
+const SCREENSHOT_PLACEHOLDERS = [
+  'Your killer feature here',
+  'your-target-site.com',
+  'Replace this copy before shipping',
+] as const;
+
+function shipReadyScreenshots(_ctx: Context): Finding[] {
+  // Subproject removed entirely → no-op. This is the "I don't need this
+  // pipeline" escape hatch, matching how welcomeConfigReadyForSubmission
+  // handles a deleted welcome entrypoint.
+  if (!existsSync(SCREENSHOTS_CONFIG_PATH)) return [];
+
+  // The rule surfaces ONE finding at a time so the skill has a single thing
+  // to fix per validator run. Ordering is intentional:
+  //   (a) If PNGs are missing, say so first — the user has to run the
+  //       generator at least once regardless of config state.
+  //   (b) Once PNGs exist, if the config still contains placeholders, those
+  //       PNGs are still factory-template output and need regeneration with
+  //       real copy.
+  const hasPng =
+    existsSync(SCREENSHOTS_OUTPUT_DIR) &&
+    readdirSync(SCREENSHOTS_OUTPUT_DIR).some((f) =>
+      f.toLowerCase().endsWith('.png'),
+    );
+
+  if (!hasPng) {
+    return [
+      {
+        rule: 'ship-ready-screenshots',
+        severity: 'error',
+        message: `.output/screenshots/ has no PNGs`,
+        why: 'CWS requires at least one screenshot for submission. A listing with zero screenshots cannot publish.',
+        source: 'https://developer.chrome.com/docs/webstore/best-listing',
+        fix: 'Run `npm run screenshots` from the repo root to generate PNGs from `screenshots/config.ts`. Or delete `screenshots/` if you\'re producing them elsewhere.',
+      },
+    ];
+  }
+
+  const configSource = readFileSync(SCREENSHOTS_CONFIG_PATH, 'utf8');
+  const stuckPlaceholders = SCREENSHOT_PLACEHOLDERS.filter((p) =>
+    configSource.includes(p),
+  );
+
+  if (stuckPlaceholders.length > 0) {
+    return [
+      {
+        rule: 'ship-ready-screenshots',
+        severity: 'error',
+        message: `screenshots/config.ts still has factory placeholder(s): ${stuckPlaceholders
+          .map((p) => `"${p}"`)
+          .join(', ')}`,
+        why: 'Shipping with factory-default screenshot copy produces CWS tiles that read as abandoned / template. The first screenshot is the search-result thumbnail — it must be real.',
+        source: 'https://developer.chrome.com/docs/webstore/best-listing',
+        fix: 'Edit `screenshots/config.ts` with your real headlines, subheads, and URLs, then re-run `npm run screenshots`. Or delete `screenshots/` entirely if you\'re producing screenshots elsewhere.',
+      },
+    ];
+  }
+
+  return [];
+}
+
 // ---------- Runner ----------
 
 // Rule functions may be sync OR async. Async rules are used for checks
@@ -640,6 +710,7 @@ const SHIP_ONLY_RULES: RuleFn[] = [
   listingReadyForSubmission,
   welcomeConfigReadyForSubmission,
   listingDrift,
+  shipReadyScreenshots,
 ];
 
 async function main() {
