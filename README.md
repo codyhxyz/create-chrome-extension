@@ -37,10 +37,12 @@ npm run dev
 - [Development Workflow](docs/02-development-workflow.md)
 - [Chrome Web Store Submission](docs/03-chrome-web-store-submission.md)
 - [Staleness Prevention](docs/04-staleness-prevention.md)
-- [Launch Materials](docs/05-launch-materials.md)
+- [Launch Materials](docs/05-launch-materials.md) — store screenshots via the `/app-store-screenshots` Claude Code skill
 - [Security](docs/06-security.md)
 - [Useful Patterns](docs/07-useful-patterns.md)
 - Templates: [Privacy Policy](docs/templates/privacy-policy.md) · [Store Listing](docs/templates/store-listing.md) · [QA Checklist](docs/templates/qa-checklist.md)
+
+**Marketing scaffolding** — `marketing/README.md` reserves a home for programmatic store-asset generation (screenshots, promo tiles) driven by the `/app-store-screenshots` skill.
 
 ## Commands
 
