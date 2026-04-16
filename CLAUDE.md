@@ -1,7 +1,7 @@
-# Chrome Extension Template
+# Chrome Extension Factory
 
 ## What this is
-A factory template for building Chrome extensions at high velocity. Ships every common extension piece (content script, background worker, popup, options, side panel) so you strip what you don't need per-project.
+A factory for building Chrome extensions at high velocity. Ships every common extension piece (content script, background worker, popup, options, side panel) so you strip what you don't need per-project.
 
 ## Tech stack
 - **WXT** — Chrome extension framework with file-based routing and auto-manifest

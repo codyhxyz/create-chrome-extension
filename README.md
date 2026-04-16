@@ -1,6 +1,6 @@
-# Chrome Extension Template
+# Chrome Extension Factory
 
-Factory template for shipping Chrome extensions fast. Built on [WXT](https://wxt.dev) + React + Tailwind CSS + TypeScript.
+Ship Chrome extensions fast. Built on [WXT](https://wxt.dev) + React + Tailwind CSS + TypeScript.
 
 ## Quick Start
 

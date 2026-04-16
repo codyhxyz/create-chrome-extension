@@ -1,6 +1,6 @@
 {
-  "name": "chrome-extension-template",
-  "description": "Chrome extension factory template — WXT + React + Tailwind + shadcn/ui",
+  "name": "chrome-extension-factory",
+  "description": "Ship Chrome extensions fast. WXT + React + Tailwind + TypeScript factory template.",
   "private": true,
   "version": "0.1.0",
   "type": "module",
