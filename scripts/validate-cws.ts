@@ -33,6 +33,7 @@
 
 import { readFileSync, readdirSync, statSync, existsSync } from 'fs';
 import { join, resolve, relative } from 'path';
+import { loadSecrets, getListing } from './cws-api.js';
 
 const ROOT = resolve(import.meta.dirname, '..');
 const ARGS = process.argv.slice(2);
@@ -550,9 +551,76 @@ function swListenerTopLevel(ctx: Context): Finding[] {
   return findings;
 }
 
+// Ship-only, async: compares the local manifest to the live CWS listing.
+// Opt-in — returns [] cleanly when CWS secrets are not configured, so the
+// factory stays green-on-structural and red-with-exactly-4-errors on ship
+// for fresh clones. When secrets ARE set, an API / auth failure also
+// no-ops (with a warning to stderr) rather than poisoning the report with
+// a spurious rule firing.
+async function listingDrift(ctx: Context): Promise<Finding[]> {
+  const secrets = loadSecrets();
+  if (!secrets) return [];
+  let listing: Awaited<ReturnType<typeof getListing>>;
+  try {
+    listing = await getListing(secrets);
+  } catch (err) {
+    // Don't crash the validator on transient CWS errors; surface a note
+    // so the user knows the drift check couldn't run.
+    const message = err instanceof Error ? err.message : String(err);
+    if (!JSON_MODE) {
+      console.error(
+        `  (note: listing-drift check skipped — CWS API call failed: ${message})`,
+      );
+    }
+    return [];
+  }
+  if (!listing) return [];
+  const findings: Finding[] = [];
+  const localName: string | undefined = ctx.manifest.name;
+  const localDescription: string | undefined = ctx.manifest.description;
+  const liveName =
+    typeof listing.name === 'string' ? listing.name : undefined;
+  const liveDescription =
+    typeof listing.summary === 'string'
+      ? listing.summary
+      : typeof listing.description === 'string'
+        ? listing.description
+        : undefined;
+  if (liveName && localName && liveName !== localName) {
+    findings.push({
+      rule: 'listing-drift',
+      severity: 'warn',
+      message: `manifest.name ("${localName}") differs from live CWS listing ("${liveName}")`,
+      why: 'A divergent name is a common oversight when listing edits happen in the CWS dashboard but never make it back to the repo. Users see the live name; your repo sees the local name. Sync before shipping.',
+      source: 'https://developer.chrome.com/docs/webstore/best-listing',
+      fix: 'Update `manifest.name` in `wxt.config.ts` to match the live CWS listing, or update the CWS dashboard to match the local manifest.',
+    });
+  }
+  if (
+    liveDescription &&
+    localDescription &&
+    liveDescription !== localDescription
+  ) {
+    findings.push({
+      rule: 'listing-drift',
+      severity: 'warn',
+      message: `manifest.description differs from live CWS listing summary`,
+      why: 'A divergent description usually means the CWS dashboard was edited directly. The manifest description is what ships in the next upload; if you ship without syncing you will overwrite the live copy.',
+      source: 'https://developer.chrome.com/docs/webstore/best-listing',
+      fix: 'Update `manifest.description` in `wxt.config.ts` to match the live listing, or update the CWS dashboard to match the local manifest.',
+    });
+  }
+  return findings;
+}
+
 // ---------- Runner ----------
 
-const STRUCTURAL_RULES = [
+// Rule functions may be sync OR async. Async rules are used for checks
+// that hit the network (listing-drift). Skill consumers don't see the
+// difference — findings are collected before JSON is emitted.
+type RuleFn = (ctx: Context) => Finding[] | Promise<Finding[]>;
+
+const STRUCTURAL_RULES: RuleFn[] = [
   hostPermissionsBreadth,
   contentScriptsMatchesBreadth,
   unusedPermission,
@@ -568,12 +636,13 @@ const STRUCTURAL_RULES = [
   swListenerTopLevel,
 ];
 
-const SHIP_ONLY_RULES = [
+const SHIP_ONLY_RULES: RuleFn[] = [
   listingReadyForSubmission,
   welcomeConfigReadyForSubmission,
+  listingDrift,
 ];
 
-function main() {
+async function main() {
   const manifest = loadManifest();
   const sources = loadSources();
   const backgroundSources = sources.filter((s) =>
@@ -581,11 +650,12 @@ function main() {
   );
 
   const ctx: Context = { manifest, sources, backgroundSources };
-  const rules = SHIP_MODE
+  const rules: RuleFn[] = SHIP_MODE
     ? [...STRUCTURAL_RULES, ...SHIP_ONLY_RULES]
     : STRUCTURAL_RULES;
   const mode: 'structural' | 'ship' = SHIP_MODE ? 'ship' : 'structural';
-  const findings = rules.flatMap((r) => r(ctx));
+  const results = await Promise.all(rules.map((r) => r(ctx)));
+  const findings = results.flat();
   const errors = findings.filter((f) => f.severity === 'error');
   const warnings = findings.filter((f) => f.severity === 'warn');
 
@@ -644,4 +714,7 @@ function main() {
   process.exit(errors.length > 0 ? 1 : 0);
 }
 
-main();
+main().catch((err) => {
+  console.error(`CWS validator: fatal — ${err instanceof Error ? err.message : String(err)}`);
+  process.exit(2);
+});
