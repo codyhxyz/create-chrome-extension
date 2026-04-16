@@ -1,0 +1,25 @@
+/*
+ * Shared CSS custom properties for content scripts.
+ * Content scripts don't use Tailwind (to avoid injecting framework CSS into host pages).
+ * Instead, use these variables for consistent theming.
+ *
+ * For popup/options/sidepanel, use Tailwind's dark: variant instead.
+ */
+
+:root {
+  --ext-bg: #ffffff;
+  --ext-text: #1a1a2e;
+  --ext-muted: #6b7280;
+  --ext-border: rgba(0, 0, 0, 0.12);
+  --ext-accent: #3b82f6;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ext-bg: #1a1a2e;
+    --ext-text: #e5e5e5;
+    --ext-muted: #9ca3af;
+    --ext-border: rgba(255, 255, 255, 0.12);
+    --ext-accent: #60a5fa;
+  }
+}

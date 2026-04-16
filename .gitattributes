@@ -1,0 +1,7 @@
+# Safety net: prevent accidental secret commits via git clean/smudge filter.
+# Configure with:
+#   git config filter.secret-inject.clean 'sed "s/REAL_SECRET/__SECRET_PLACEHOLDER__/g"'
+#   git config filter.secret-inject.smudge 'sed "s/__SECRET_PLACEHOLDER__/REAL_SECRET/g"'
+#
+# Uncomment and adjust the line below for files that contain secrets:
+# entrypoints/background.ts filter=secret-inject
