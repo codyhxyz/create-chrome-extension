@@ -1,5 +1,7 @@
 # Sources — Knowledge Provenance Layer
 
+> **➤ Next action:** open [`_mining-queue.md`](./_mining-queue.md) — the prioritized list of captures to make next. Discovery passes live in [`_discovery/`](./_discovery/).
+
 Raw materials behind `docs/`. Everything under `docs/` makes claims; everything under `sources/` stores the evidence those claims came from, with enough fidelity to survive link rot.
 
 The factory's moat is not the scaffolding (WXT generates that) — it's the **curated knowledge**: which permissions trip manual review, which CSP values pass, which lifecycle quirks bite. That knowledge is synthesized from official docs, Chrome DevRel posts, and community writeups. `sources/` is where those raw materials live so you can re-read them, cite them precisely, and regenerate the distilled `docs/` playbooks from primary evidence.
@@ -9,6 +11,7 @@ The factory's moat is not the scaffolding (WXT generates that) — it's the **cu
 ```
 sources/
   README.md               # you are here
+  _mining-queue.md        # TODO list — what to capture next
   _templates/             # example captures, human reference for manual edits
     official.md
     forum-thread.md
@@ -16,6 +19,9 @@ sources/
   _scripts/
     capture.ts            # URL → markdown capture with frontmatter + Wayback
     build-index.ts        # regenerates _index/* from frontmatter
+  _discovery/             # venue rankings (where is the signal? where is the noise?)
+    2026-04-16_forum-ranking.md
+    2026-04-16_blog-ranking.md
   _index/                 # generated — do not edit by hand
     by-topic.md
     by-date.md
