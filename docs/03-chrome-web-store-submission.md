@@ -51,22 +51,59 @@ Use the templates in `docs/templates/` to prepare:
 
 Review typically takes 1-3 business days. You'll get an email when approved or rejected.
 
-## Automated Publishing with `wxt submit`
+## Automated publishing: `npm run ship`
 
-WXT supports automated submission via environment variables:
+One command runs the full flow: validate → compare versions → build+zip → upload → publish → poll until terminal state.
 
 ```bash
-# Set these in your CI environment or .env file
-export CHROME_EXTENSION_ID="your-extension-id"
-export CHROME_CLIENT_ID="your-oauth-client-id"
-export CHROME_CLIENT_SECRET="your-oauth-client-secret"
-export CHROME_REFRESH_TOKEN="your-refresh-token"
-
-# Submit
-wxt submit
+npm run ship
 ```
 
-To obtain OAuth credentials, follow the [Chrome Web Store API guide](https://developer.chrome.com/docs/webstore/using-api).
+Which expands to:
+
+```
+npm run check:cws:ship   # 16 rules: structural + listing/welcome readiness + listing drift
+tsx scripts/version-sync.ts  # local package.json version > live CWS version
+wxt zip                  # build and package for CWS
+tsx scripts/publish-cws.ts   # upload, publish, poll status
+```
+
+The first failing gate halts the pipeline. You never produce a zip that isn't ship-ready, and you never push a version that doesn't bump the live one.
+
+### Secrets setup (opt-in)
+
+The publish step (and the `listing-drift` validator rule, and `version-sync`) need the same 4 OAuth secrets as the keepalive workflow:
+
+- `CWS_EXTENSION_ID`
+- `CWS_CLIENT_ID`
+- `CWS_CLIENT_SECRET`
+- `CWS_REFRESH_TOKEN`
+
+See [08-keepalive-publish.md](./08-keepalive-publish.md) for the one-time OAuth setup — same credentials, same guide.
+
+**Without these secrets set, every CWS API step no-ops cleanly.** `version-sync` prints "skipped" and exits 0. `publish-cws` prints a "configure CWS_* secrets to enable" message and exits 0. `listing-drift` returns nothing. Forks of the factory never see a red CI badge because they haven't pasted OAuth tokens.
+
+### Setting secrets locally
+
+For local runs, export them in your shell, use direnv, or put them in a git-ignored `.env` file consumed by your shell:
+
+```bash
+export CWS_EXTENSION_ID="abcdefghijklmnopqrstuvwxyz123456"
+export CWS_CLIENT_ID="xxx.apps.googleusercontent.com"
+export CWS_CLIENT_SECRET="xxx"
+export CWS_REFRESH_TOKEN="xxx"
+npm run ship
+```
+
+### What `publish-cws` reports
+
+The script emits state transitions on stdout (`uploading`, `uploaded`, `publishing`, `in-review`, `live`, `rejected`, `failed`, `timeout`) with timestamps. Use `--json` for a single envelope that skills or CI jobs can parse.
+
+Review typically completes in 1–3 business days. If polling times out (~15 minutes default), check the CWS dashboard for final status.
+
+### Alternate: `wxt submit`
+
+WXT also has a built-in submit command with its own env var names (`CHROME_EXTENSION_ID`, `CHROME_CLIENT_ID`, etc.). Use `npm run ship` for the gated pipeline; `wxt submit` is the bare submission if you want to skip the gates.
 
 ## Common Rejection Reasons
 

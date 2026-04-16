@@ -84,6 +84,8 @@ Profiles: content-script-only, popup-based, side-panel app, full hybrid. See [do
 | `npm run compile` | TypeScript type check |
 | `npm run check:cws` | CWS structural check (runs in CI) |
 | `npm run check:cws:ship` | CWS submission-readiness gate (run before `zip`) |
+| `npm run version-sync` | Compare local version to live CWS version (no-ops without CWS secrets) |
+| `npm run ship` | End-to-end publish: `check:cws:ship` → `version-sync` → `wxt zip` → upload & poll (no-ops at publish step without secrets) |
 | `npm run capture:source` | Capture a URL into `sources/` with provenance |
 | `npm run index:sources` | Regenerate `sources/_index/*` from capture frontmatter |
 | `npm run dev:firefox` | Dev server for Firefox |

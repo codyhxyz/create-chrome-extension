@@ -25,9 +25,10 @@ The user (human or AI) interacts with a small, opinionated set of commands. Each
 |---|---|---|---|
 | `npm run compile` | manual, CI | TypeScript correctness | ✓ green |
 | `npm run check:cws` | every push to CI | well-formed extension structure (13 rules) | ✓ green |
-| `npm run check:cws:ship` | manual | structural + listing/welcome content filled in (15 rules) | ✗ red (by design) |
+| `npm run check:cws:ship` | manual | structural + listing/welcome content filled in (16 rules; 1 opt-in) | ✗ red (by design) |
 | `npm run zip` | manual, to package for CWS upload | **gated on `check:cws:ship`** — no zip is produced until ship is green | ✗ refuses (by design) |
-| `npm run ship` *(planned)* | manual, to publish to CWS | `check:cws:ship` + version sync + `wxt zip` + `wxt submit` | requires opt-in secrets |
+| `npm run version-sync` | manual, inside `ship` | local `package.json` version > live CWS version | ✓ skips cleanly without CWS secrets |
+| `npm run ship` | manual, to publish to CWS | `check:cws:ship` → `version-sync` → `wxt zip` → `publish-cws` | halts at first red gate; publish step is opt-in on secrets |
 
 The user never has to know "remember to run the validator." The ship path runs it automatically. The only way to produce a submittable artifact is through a gate that checks everything.
 
@@ -70,9 +71,11 @@ The user never has to know "remember to run the validator." The ship path runs i
                   │  Repo (deterministic substrate):        │
                   │   • scripts/validate-cws.ts             │
                   │     (pattern, presence, policy)         │
-                  │   • scripts/publish-cws.ts   (planned)  │
+                  │   • scripts/cws-api.ts                  │
+                  │     (shared OAuth client wrapper)       │
+                  │   • scripts/publish-cws.ts              │
                   │     (CWS API submit + poll)             │
-                  │   • scripts/version-sync.ts  (planned)  │
+                  │   • scripts/version-sync.ts             │
                   │     (local manifest ↔ CWS dashboard)    │
                   │   • entrypoints/welcome/                │
                   │     (runtime permission pattern)        │
@@ -101,6 +104,8 @@ The validator doesn't know Claude exists. It emits stable rule ids. The skill ma
 - **Gates must fail loudly.** Non-zero exit, `✗ error` in output, clear "fix:" line. A silent-failure gate is worse than no gate.
 - **Features requiring external auth are opt-in.** If the secret isn't set, the script no-ops cleanly — it does not fail. Contributors don't want a red CI badge because they didn't paste OAuth tokens. Pattern: see `.github/workflows/keepalive-publish.yml`'s "enabled" gate.
 - **The factory must be pre-ship by default.** `check:cws:ship` fails on a fresh clone because the user hasn't customized yet. That's the forcing function. Don't "fix" it by populating real-looking placeholders.
+- **Validator rules may be async.** A rule function returns `Finding[] | Promise<Finding[]>`. Async rules exist for checks that hit the network (`listing-drift`). If the network call fails, the rule should return `[]` with a note to stderr — never fail the validator on a transient CWS / connectivity issue.
+- **`--json` envelope shape is shared across scripts.** `scripts/validate-cws.ts`, `scripts/version-sync.ts`, and `scripts/publish-cws.ts` all emit `schemaVersion: 1` envelopes. Additive-only: new fields OK, renaming / removing requires a `schemaVersion` bump.
 
 ---
 
@@ -136,11 +141,11 @@ Each of these follows the principle above: the deterministic piece lives in a sc
 
 | Item | Kind | Notes |
 |---|---|---|
-| `--json` output mode on validator | Script extension | Unblocks every skill that consumes findings. Low-risk; add first. |
-| `scripts/version-sync.ts` | Script | Reads CWS dashboard version via existing OAuth secrets. Refuses upload if local ≤ remote. Opt-in; no-ops if secrets absent. |
-| `scripts/publish-cws.ts` | Script | Wraps `wxt submit` + status polling. Emits structured state transitions (`submitted`, `in-review`, `rejected`, `live`). |
-| `npm run ship` | Gate | `check:cws:ship && version-sync && wxt zip && wxt submit`. One command to go live. |
-| `listing-drift` validator rule | Script rule | Fetches published listing from CWS; flags divergence from local manifest (description, name, privacy policy URL). Ship-only; requires secrets. |
+| ~~`--json` output mode on validator~~ | Script extension | **Done.** `validate-cws.ts --json` emits `schemaVersion: 1` envelope consumed by skills. |
+| ~~`scripts/version-sync.ts`~~ | Script | **Done (Session 1).** Reads CWS live version via OAuth. No-ops without secrets; exits 1 only when local ≤ remote. `--json` supported. |
+| ~~`scripts/publish-cws.ts`~~ | Script | **Done (Session 1).** Uploads zip, publishes, polls status, emits structured state transitions. No-ops without secrets. `--json` supported. |
+| ~~`npm run ship`~~ | Gate | **Done (Session 1).** `check:cws:ship && version-sync && wxt zip && publish-cws`. First halt wins. |
+| ~~`listing-drift` validator rule~~ | Script rule | **Done (Session 1).** Warn-severity; ship-only; returns `[]` without secrets (factory invariant preserved). |
 | `cws-ship` skill | Skill | Orchestrates the full submission flow using `--json` output. Maps each rule id to a conversational fix recipe. |
 | `cws-content` skill | Skill | Elicits name, description, value prop, justifications, privacy policy URL. Writes to `wxt.config.ts` + `entrypoints/welcome/config.ts`. Runs validator to confirm. |
 | `cws-screens` skill + repo infrastructure | Skill + Script | Next.js page with browser-chrome frame, 1280×800 export. Distinct from the iOS `app-store-screenshots` skill. Separate conversation — screenshots iterate independently of listing copy. |
