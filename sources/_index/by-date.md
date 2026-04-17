@@ -2,7 +2,7 @@
 
 # Sources by Date
 
-35 captures, newest first. Regenerate with `npm run index:sources`.
+44 captures, newest first. Regenerate with `npm run index:sources`.
 
 ## 2026-04-17
 
@@ -43,7 +43,16 @@
 - [extracted/2026-04-16_palant_01-13-chrome-web-store-is-a-mess.md](../extracted/2026-04-16_palant_01-13-chrome-web-store-is-a-mess.md) **(c)**
 - [extracted/2026-04-16_palant_01-20-malicious-extensions-circumvent-googles-remote-code-ba.md](../extracted/2026-04-16_palant_01-20-malicious-extensions-circumvent-googles-remote-code-ba.md) **(c)**
 - [extracted/2026-04-16_palant_02-03-analysis-of-an-advanced-malicious-chrome-extension.md](../extracted/2026-04-16_palant_02-03-analysis-of-an-advanced-malicious-chrome-extension.md) **(c)**
+- [extracted/2026-04-17_bashvlas_blog-index.md](../extracted/2026-04-17_bashvlas_blog-index.md) **(c)**
 - [extracted/2026-04-17_bashvlas_main-content-script-james-bond.md](../extracted/2026-04-17_bashvlas_main-content-script-james-bond.md) **(c)**
 - [extracted/2026-04-17_bashvlas_update-without-review.md](../extracted/2026-04-17_bashvlas_update-without-review.md) **(c)**
+- [extracted/2026-04-17_coditude_blue-argon-mv3.md](../extracted/2026-04-17_coditude_blue-argon-mv3.md) **(c)**
+- [extracted/2026-04-17_coditude_blue-series-prohibited-products.md](../extracted/2026-04-17_coditude_blue-series-prohibited-products.md) **(c)**
+- [extracted/2026-04-17_coditude_purple-family-privacy.md](../extracted/2026-04-17_coditude_purple-family-privacy.md) **(c)**
+- [extracted/2026-04-17_coditude_purple-potassium-permissions.md](../extracted/2026-04-17_coditude_purple-potassium-permissions.md) **(c)**
 - [extracted/2026-04-17_coditude_rejection-codes-overview.md](../extracted/2026-04-17_coditude_rejection-codes-overview.md) **(c)**
+- [extracted/2026-04-17_coditude_yellow-zinc-metadata.md](../extracted/2026-04-17_coditude_yellow-zinc-metadata.md) **(c)**
+- [extracted/2026-04-17_frisbie-substack_malicious-extensions-part-1.md](../extracted/2026-04-17_frisbie-substack_malicious-extensions-part-1.md) **(c)**
+- [extracted/2026-04-17_frisbie-substack_malicious-extensions-part-2.md](../extracted/2026-04-17_frisbie-substack_malicious-extensions-part-2.md) **(c)**
+- [extracted/2026-04-17_frisbie-substack_malicious-extensions-part-3.md](../extracted/2026-04-17_frisbie-substack_malicious-extensions-part-3.md) **(c)**
 - [extracted/2026-04-17_frisbie-substack_tracking-extension-ownership.md](../extracted/2026-04-17_frisbie-substack_tracking-extension-ownership.md) **(c)**

@@ -51,7 +51,7 @@ The hub. Every other venue cross-links here. All **(auto --render)** — Playwri
 
 Author of the only up-to-date book on browser extensions (2nd ed. Sept 2025). Prompt API + User Scripts + Offscreen coverage.
 
-- [x] **Frisbie Substack — 3-part malicious extension series.** Captured 2026-04-17 via `--render`. **Finding:** parts 1–3 are teaser announcements pointing to external partner content (Spin.AI guest essay, LayerX webinar, Seraphic Security webinar); substantive content is OFF-substack. Files: `blogs/2026-04-17_frisbie-substack_malicious-extensions-part-{1,2,3}.md`. Follow-up: capture the partner-site essays/webinars (see "Next discovery passes").
+- [x] **Frisbie Substack — 3-part malicious extension series.** Captured + extracted 2026-04-17. **Finding:** parts 1–3 are teaser announcements pointing to external partner content (Spin.AI guest essay, LayerX webinar, Seraphic Security webinar); substantive content is OFF-substack. The extractions name Cyberhaven, ChromeLoader, PDF Toolbox, Dataspii as breach cases discussed in partner content. **Follow-up discovery targets:** the Spin.AI essay, LayerX webinar, Seraphic webinar, and the named breach writeups.
 - [x] **Frisbie — "Tracking Browser Extension Ownership"** — captured + extracted. File: `blogs/2026-04-17_frisbie-substack_tracking-extension-ownership.md`, `extracted/2026-04-17_frisbie-substack_tracking-extension-ownership.md`. Names Under-New-Management tool + WECG API proposal.
 - [ ] **`buildingbrowserextensions.com`** — if a blog exists at the book's site, capture the extension-specific posts.
 
@@ -59,7 +59,7 @@ Author of the only up-to-date book on browser extensions (2nd ed. Sept 2025). Pr
 
 Only systematic public mapping of CWS rejection-code *families* (Blue / Purple / Red / Grey / Yellow series) with Dec 2025–Jan 2026 posts. Primary source for the color-code legend in `docs/09`.
 
-- [x] **All Coditude rejection-code family posts** — captured 2026-04-17 via `--render` (Coditude is SPA, always needs render). 6 files: overview + blue-series-prohibited-products + blue-argon-mv3 + purple-family-privacy + purple-potassium-permissions + yellow-zinc-metadata. **Negative finding:** no Red-family or Grey/Gray-family posts exist. Overview extracted; 5 individual posts still in extraction backlog.
+- [x] **All Coditude rejection-code family posts** — captured + extracted 2026-04-17 via `--render` (Coditude is SPA, always needs render). 6 raw captures + 6 extractions: overview + blue-series-prohibited-products + blue-argon-mv3 + purple-family-privacy + purple-potassium-permissions + yellow-zinc-metadata. **Negative finding:** no Red-family or Grey/Gray-family posts exist. **Meta-insight from extractions:** most color-family names are informal reviewer classifications, not Google-public labels; Blue Argon is the exception. Now reflected in `docs/09` decoder-table caveat.
 
 ## Batch 6 — Tier-S blog: Vlas Bashynskyi (bashvlas.com)
 
@@ -67,7 +67,7 @@ Agency owner, 40+ extension posts, strong 2024–2025 cadence.
 
 - [x] **"MAIN content script is like James Bond"** — captured + extracted 2026-04-17. bashvlas is SSR so plain fetch works. Signal: MAIN world trade-off (page globals + fetch hook vs. chrome.* APIs).
 - [x] **"Update without review"** — captured + extracted 2026-04-17. Signal: Google-recommended remote-configuration pattern (data, not code) for adding supported sites without re-review.
-- [x] **`bashvlas.com/blog` index** — captured 2026-04-17. Reference page for future triage (extraction pending, low priority).
+- [x] **`bashvlas.com/blog` index** — captured + extracted 2026-04-17. Extraction surfaces 5 high-priority titles as next-pass capture candidates.
 
 ## Batch 7 — Tier-A blogs: known cited, promote to captures
 

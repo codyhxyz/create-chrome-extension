@@ -225,6 +225,8 @@ So "unwritten" is wrong in letter but right in spirit. Your first submission wit
 
 When a rejection email arrives, the color-element code maps to a policy family. Table sourced from Coditude; check your email for the exact code, match here, then jump to the relevant section above for the detailed rule.
 
+**Meta-caveat:** Blue Argon (MV3/code) is a public label that appears in official docs. Most other color-family names are **informal reviewer classifications** — Coditude documents them by observing reviewer behavior, but they are not all public Google-published labels. Treat the decoder below as calibration: the *code you see in your rejection email is real*; the *color-family taxonomy* around it is community reverse-engineering. [Extracted caveat.](../sources/extracted/2026-04-17_coditude_blue-series-prohibited-products.md)
+
 | Code | Family | Common cause | Fix path |
 |---|---|---|---|
 | **Blue Argon** | MV3 code requirements | Remote-hosted code, `<script src>` CDN, `eval` | Bundle all logic locally; remove `eval`/`new Function`; see "Manifest V3 code requirements" |
