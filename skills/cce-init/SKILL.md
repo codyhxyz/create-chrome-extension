@@ -138,9 +138,34 @@ End with: "OK — let's customize this to your extension. First question is abou
 
 ---
 
-## Phase C — Profile selection
+## Phase C — Profile selection (pitch-driven)
 
-Present the 4 shapes from `docs/01-extension-type-profiles.md`. Ask the user which fits. Show the delete list for each one up front so the tradeoffs are explicit:
+Use the pitch already collected in Phase B2. If for any reason it's missing (skill was invoked directly into Phase C), ask now: "In one or two sentences — what are you building?"
+
+Based on the pitch, **recommend** one of the 4 profiles from `docs/01-extension-type-profiles.md`. Heuristics:
+
+- "page enhancer / injector / modifier / block / highlight / modify the DOM" → **content-script-only**
+- "quick action from the toolbar / popup / click the icon to ___" → **popup-based**
+- "persistent panel / research / reference / chat with a page" → **sidepanel**
+- "everything / I need it all / let me decide later" → **full hybrid**
+
+Present the recommendation with a clear exit:
+
+> Sounds like **<profile name>** fits best: <one-sentence why>. That means I'll delete:
+>
+> <exact delete list from the profile-strip semantics below>
+>
+> Does that match? (yes / show the other options / keep everything)
+
+On "yes": proceed to the welcome follow-up (below) and then profile-strip semantics.
+
+On "show the other options": present the 4-option menu (see `### Fallback: menu selection` below) and let the user pick.
+
+On "keep everything": treat as full-hybrid (profile 4, no deletions).
+
+### Fallback: menu selection
+
+If the user asks to see the options, show this menu verbatim:
 
 > What's the shape of your extension? Pick one:
 >
