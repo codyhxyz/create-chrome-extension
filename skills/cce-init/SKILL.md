@@ -42,6 +42,35 @@ The factory invariant after a fresh-clone run: `npm run check:cws` stays green; 
 
 ---
 
+## Phase 0 — Locate the factory
+
+Before anything else, figure out whether the current working directory IS a factory repo. A factory repo has BOTH of:
+
+- `wxt.config.ts` at the repo root
+- `scripts/validate-cws.ts`
+
+**If both present:** you're in a factory. Proceed to Phase A.
+
+**If either is missing:** the user invoked `/cce-init` outside a factory. Offer to clone:
+
+> This directory isn't a Chrome Extension Factory. Want me to clone one?
+>
+> 1. Clone into a new subdirectory of the current working directory (recommended). Ask for a name.
+> 2. Clone into an existing empty directory. Ask for the path.
+> 3. Cancel — I'll exit and the user can run `npx create-chrome-extension <name>` themselves.
+
+On choice 1: ask for the name, then run `git clone --depth 1 <factory-repo-url> ./<name>` + `rm -rf ./<name>/.git` + `git init ./<name>` + switch the skill's working directory to `./<name>` (use the Bash tool's `cwd` for subsequent calls). Then run `npm install` in the new directory. Then proceed to Phase A from the new directory.
+
+On choice 2: validate the target is empty; same sequence.
+
+On choice 3: exit cleanly with instructions:
+
+> Run `npx create-chrome-extension <name>` to scaffold the factory, then re-invoke `/cce-init` inside the new directory.
+
+The factory repo URL is fixed — use the canonical URL documented in `packages/cli/bin/cli.mjs` (`REPO_URL`, overridable via `CCE_REPO_URL` env var). Do not invent a different URL.
+
+---
+
 ## Phase A — Detect state
 
 **Before anything else**, figure out whether this is a fresh clone or a re-invocation.
