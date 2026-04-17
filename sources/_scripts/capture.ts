@@ -154,7 +154,7 @@ async function fetchHtml(url: string): Promise<string> {
   const resp = await fetch(url, {
     headers: {
       "User-Agent":
-        "create-chrome-extension-source-capture/1.0 (+https://github.com/ydoc5212/create-chrome-extension)",
+        "create-chrome-extension-source-capture/1.0 (+https://github.com/codyhxyz/create-chrome-extension)",
       Accept: "text/html,application/xhtml+xml",
       "Accept-Language": "en-US,en;q=0.9",
     },

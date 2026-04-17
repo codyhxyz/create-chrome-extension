@@ -1,5 +1,7 @@
 # Chrome Extension Factory
 
+*Package: `create-chrome-extension` — clone this repo to scaffold a new extension.*
+
 Ship Chrome extensions fast. [WXT](https://wxt.dev) + React 19 + Tailwind v4 + TypeScript.
 
 > **First time here?** After cloning and running `npm install`, invoke **`/cws-init`** in Claude Code. The skill walks you through profile selection, listing copy, screenshots, and a launch video — from fresh clone to ship-ready in one guided pass. See [ARCHITECTURE.md](ARCHITECTURE.md) for the design philosophy.
