@@ -2,7 +2,23 @@
 
 # Sources by Date
 
-9 captures, newest first. Regenerate with `npm run index:sources`.
+35 captures, newest first. Regenerate with `npm run index:sources`.
+
+## 2026-04-17
+
+- [Vlas Bashynskyi Blog - Chrome Extension Developer Blog](../blogs/2026-04-17_bashvlas_blog-index.md) **(c)** · _blog_
+- [MAIN Content Script in Chrome Extensions is like James Bond](../blogs/2026-04-17_bashvlas_main-content-script-james-bond.md) **(c)** · _blog_
+- [Update Your Chrome Extensions Without Review](../blogs/2026-04-17_bashvlas_update-without-review.md) **(c)** · _blog_
+- [Blue Argon - MV3 Additional Requirements Explained](../blogs/2026-04-17_coditude_blue-argon-mv3.md) **(c)** · _blog_
+- [Blue Series: Prohibited Products in the Chrome Web Store](../blogs/2026-04-17_coditude_blue-series-prohibited-products.md) **(c)** · _blog_
+- [Understanding Purple Family Rejection Codes: Resolving User Data Privacy](../blogs/2026-04-17_coditude_purple-family-privacy.md) **(c)** · _blog_
+- [Purple Potassium: How to Correct Permission Abuse in Chrome Extensions](../blogs/2026-04-17_coditude_purple-potassium-permissions.md) **(c)** · _blog_
+- [Chrome Web Store Rejection Codes: Meaning & Fixes](../blogs/2026-04-17_coditude_rejection-codes-overview.md) **(c)** · _blog_
+- [Yellow Zinc: Chrome Extension Violations for Metadata and Listing Issues](../blogs/2026-04-17_coditude_yellow-zinc-metadata.md) **(c)** · _blog_
+- [Let's Talk About Malicious Browser Extensions: Part 1](../blogs/2026-04-17_frisbie-substack_malicious-extensions-part-1.md) **(c)** · _blog_
+- [Let's Talk About Malicious Browser Extensions: Part 2](../blogs/2026-04-17_frisbie-substack_malicious-extensions-part-2.md) **(c)** · _blog_
+- [Let's Talk About Malicious Browser Extensions: Part 3](../blogs/2026-04-17_frisbie-substack_malicious-extensions-part-3.md) **(c)** · _blog_
+- [Tracking Browser Extension Ownership - by Matt Frisbie](../blogs/2026-04-17_frisbie-substack_tracking-extension-ownership.md) **(c)** · _blog_
 
 ## 2026-04-16
 
@@ -15,3 +31,19 @@
 - [Extension review time. How to improve it?](../forums/2026-04-16_google-group_review-times-deferred-publishing.md) **(b)** · _forum_
 - [MV3, (inactive) service workers, and alarms](../forums/2026-04-16_google-group_sw-event-listeners-top-level.md) **(b)** · _forum_
 - [chrome.permissions  |  API  |  Chrome for Developers](../official/2026-04-16_chrome-developers_reference-api-permissions.md) **(a)** · _official_
+
+## unknown
+
+- [extracted/2026-04-16_chrome-developers_reference-api-permissions.md](../extracted/2026-04-16_chrome-developers_reference-api-permissions.md) **(a)**
+- [extracted/2026-04-16_google-group_auto-update-sw-race-condition.md](../extracted/2026-04-16_google-group_auto-update-sw-race-condition.md) **(b)**
+- [extracted/2026-04-16_google-group_content-scripts-matches-review.md](../extracted/2026-04-16_google-group_content-scripts-matches-review.md) **(b)**
+- [extracted/2026-04-16_google-group_review-times-deferred-publishing.md](../extracted/2026-04-16_google-group_review-times-deferred-publishing.md) **(b)**
+- [extracted/2026-04-16_google-group_sw-event-listeners-top-level.md](../extracted/2026-04-16_google-group_sw-event-listeners-top-level.md) **(b)**
+- [extracted/2026-04-16_macarthur_posts-chrome-extension-host-permission.md](../extracted/2026-04-16_macarthur_posts-chrome-extension-host-permission.md) **(c)**
+- [extracted/2026-04-16_palant_01-13-chrome-web-store-is-a-mess.md](../extracted/2026-04-16_palant_01-13-chrome-web-store-is-a-mess.md) **(c)**
+- [extracted/2026-04-16_palant_01-20-malicious-extensions-circumvent-googles-remote-code-ba.md](../extracted/2026-04-16_palant_01-20-malicious-extensions-circumvent-googles-remote-code-ba.md) **(c)**
+- [extracted/2026-04-16_palant_02-03-analysis-of-an-advanced-malicious-chrome-extension.md](../extracted/2026-04-16_palant_02-03-analysis-of-an-advanced-malicious-chrome-extension.md) **(c)**
+- [extracted/2026-04-17_bashvlas_main-content-script-james-bond.md](../extracted/2026-04-17_bashvlas_main-content-script-james-bond.md) **(c)**
+- [extracted/2026-04-17_bashvlas_update-without-review.md](../extracted/2026-04-17_bashvlas_update-without-review.md) **(c)**
+- [extracted/2026-04-17_coditude_rejection-codes-overview.md](../extracted/2026-04-17_coditude_rejection-codes-overview.md) **(c)**
+- [extracted/2026-04-17_frisbie-substack_tracking-extension-ownership.md](../extracted/2026-04-17_frisbie-substack_tracking-extension-ownership.md) **(c)**

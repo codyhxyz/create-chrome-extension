@@ -2,43 +2,123 @@
 
 # Sources by Topic
 
-9 captures across 18 topics. Regenerate with `npm run index:sources`.
+35 captures across 51 topics. Regenerate with `npm run index:sources`.
 
 ## activeTab
 
 - [Avoiding a "Host Permission" Review Delay When Publishing a Chrome Extension | Alex MacArthur](../blogs/2026-04-16_macarthur_posts-chrome-extension-host-permission.md) **(c)** · _blog_
+- [extracted/2026-04-16_chrome-developers_reference-api-permissions.md](../extracted/2026-04-16_chrome-developers_reference-api-permissions.md) **(a)**
+- [extracted/2026-04-16_google-group_content-scripts-matches-review.md](../extracted/2026-04-16_google-group_content-scripts-matches-review.md) **(b)**
+- [extracted/2026-04-16_macarthur_posts-chrome-extension-host-permission.md](../extracted/2026-04-16_macarthur_posts-chrome-extension-host-permission.md) **(c)**
+
+## alarms
+
+- [extracted/2026-04-16_google-group_sw-event-listeners-top-level.md](../extracted/2026-04-16_google-group_sw-event-listeners-top-level.md) **(b)**
 
 ## auto-update
 
 - [MV3 service worker broken after auto-update](../forums/2026-04-16_google-group_auto-update-sw-race-condition.md) **(b)** · _forum_
+- [extracted/2026-04-16_google-group_auto-update-sw-race-condition.md](../extracted/2026-04-16_google-group_auto-update-sw-race-condition.md) **(b)**
+
+## blue
+
+- [Blue Argon - MV3 Additional Requirements Explained](../blogs/2026-04-17_coditude_blue-argon-mv3.md) **(c)** · _blog_
+- [Blue Series: Prohibited Products in the Chrome Web Store](../blogs/2026-04-17_coditude_blue-series-prohibited-products.md) **(c)** · _blog_
+
+## chromium-bug
+
+- [extracted/2026-04-16_google-group_auto-update-sw-race-condition.md](../extracted/2026-04-16_google-group_auto-update-sw-race-condition.md) **(b)**
 
 ## content-scripts
 
+- [MAIN Content Script in Chrome Extensions is like James Bond](../blogs/2026-04-17_bashvlas_main-content-script-james-bond.md) **(c)** · _blog_
 - [publishing delayed - Broad host permissions](../forums/2026-04-16_google-group_content-scripts-matches-review.md) **(b)** · _forum_
+- [extracted/2026-04-16_google-group_content-scripts-matches-review.md](../extracted/2026-04-16_google-group_content-scripts-matches-review.md) **(b)**
+- [extracted/2026-04-16_macarthur_posts-chrome-extension-host-permission.md](../extracted/2026-04-16_macarthur_posts-chrome-extension-host-permission.md) **(c)**
+- [extracted/2026-04-17_bashvlas_main-content-script-james-bond.md](../extracted/2026-04-17_bashvlas_main-content-script-james-bond.md) **(c)**
+
+## content-security-policy
+
+- [extracted/2026-04-16_palant_01-20-malicious-extensions-circumvent-googles-remote-code-ba.md](../extracted/2026-04-16_palant_01-20-malicious-extensions-circumvent-googles-remote-code-ba.md) **(c)**
+- [extracted/2026-04-16_palant_02-03-analysis-of-an-advanced-malicious-chrome-extension.md](../extracted/2026-04-16_palant_02-03-analysis-of-an-advanced-malicious-chrome-extension.md) **(c)**
 
 ## cws-review
 
+- [Update Your Chrome Extensions Without Review](../blogs/2026-04-17_bashvlas_update-without-review.md) **(c)** · _blog_
+- [Blue Argon - MV3 Additional Requirements Explained](../blogs/2026-04-17_coditude_blue-argon-mv3.md) **(c)** · _blog_
+- [Blue Series: Prohibited Products in the Chrome Web Store](../blogs/2026-04-17_coditude_blue-series-prohibited-products.md) **(c)** · _blog_
+- [Understanding Purple Family Rejection Codes: Resolving User Data Privacy](../blogs/2026-04-17_coditude_purple-family-privacy.md) **(c)** · _blog_
+- [Purple Potassium: How to Correct Permission Abuse in Chrome Extensions](../blogs/2026-04-17_coditude_purple-potassium-permissions.md) **(c)** · _blog_
+- [Chrome Web Store Rejection Codes: Meaning & Fixes](../blogs/2026-04-17_coditude_rejection-codes-overview.md) **(c)** · _blog_
+- [Yellow Zinc: Chrome Extension Violations for Metadata and Listing Issues](../blogs/2026-04-17_coditude_yellow-zinc-metadata.md) **(c)** · _blog_
 - [Avoiding a "Host Permission" Review Delay When Publishing a Chrome Extension | Alex MacArthur](../blogs/2026-04-16_macarthur_posts-chrome-extension-host-permission.md) **(c)** · _blog_
 - [Chrome Web Store is a mess | Almost Secure](../blogs/2026-04-16_palant_01-13-chrome-web-store-is-a-mess.md) **(c)** · _blog_
 - [publishing delayed - Broad host permissions](../forums/2026-04-16_google-group_content-scripts-matches-review.md) **(b)** · _forum_
 - [Extension review time. How to improve it?](../forums/2026-04-16_google-group_review-times-deferred-publishing.md) **(b)** · _forum_
 - [chrome.permissions  |  API  |  Chrome for Developers](../official/2026-04-16_chrome-developers_reference-api-permissions.md) **(a)** · _official_
+- [extracted/2026-04-16_google-group_content-scripts-matches-review.md](../extracted/2026-04-16_google-group_content-scripts-matches-review.md) **(b)**
+- [extracted/2026-04-16_google-group_review-times-deferred-publishing.md](../extracted/2026-04-16_google-group_review-times-deferred-publishing.md) **(b)**
+- [extracted/2026-04-16_macarthur_posts-chrome-extension-host-permission.md](../extracted/2026-04-16_macarthur_posts-chrome-extension-host-permission.md) **(c)**
+- [extracted/2026-04-16_palant_01-13-chrome-web-store-is-a-mess.md](../extracted/2026-04-16_palant_01-13-chrome-web-store-is-a-mess.md) **(c)**
+- [extracted/2026-04-17_bashvlas_update-without-review.md](../extracted/2026-04-17_bashvlas_update-without-review.md) **(c)**
+- [extracted/2026-04-17_coditude_rejection-codes-overview.md](../extracted/2026-04-17_coditude_rejection-codes-overview.md) **(c)**
+
+## declarative-net-request
+
+- [extracted/2026-04-16_palant_01-20-malicious-extensions-circumvent-googles-remote-code-ba.md](../extracted/2026-04-16_palant_01-20-malicious-extensions-circumvent-googles-remote-code-ba.md) **(c)**
+- [extracted/2026-04-16_palant_02-03-analysis-of-an-advanced-malicious-chrome-extension.md](../extracted/2026-04-16_palant_02-03-analysis-of-an-advanced-malicious-chrome-extension.md) **(c)**
 
 ## deferred-publishing
 
 - [Extension review time. How to improve it?](../forums/2026-04-16_google-group_review-times-deferred-publishing.md) **(b)** · _forum_
+- [extracted/2026-04-16_google-group_review-times-deferred-publishing.md](../extracted/2026-04-16_google-group_review-times-deferred-publishing.md) **(b)**
+
+## fake-reviews
+
+- [extracted/2026-04-16_palant_01-13-chrome-web-store-is-a-mess.md](../extracted/2026-04-16_palant_01-13-chrome-web-store-is-a-mess.md) **(c)**
+
+## featured-badge
+
+- [extracted/2026-04-16_palant_01-13-chrome-web-store-is-a-mess.md](../extracted/2026-04-16_palant_01-13-chrome-web-store-is-a-mess.md) **(c)**
+
+## html-injection
+
+- [extracted/2026-04-16_palant_01-20-malicious-extensions-circumvent-googles-remote-code-ba.md](../extracted/2026-04-16_palant_01-20-malicious-extensions-circumvent-googles-remote-code-ba.md) **(c)**
+
+## index
+
+- [Vlas Bashynskyi Blog - Chrome Extension Developer Blog](../blogs/2026-04-17_bashvlas_blog-index.md) **(c)** · _blog_
+
+## intelligence-gathering
+
+- [extracted/2026-04-17_bashvlas_main-content-script-james-bond.md](../extracted/2026-04-17_bashvlas_main-content-script-james-bond.md) **(c)**
+
+## isolated-world
+
+- [extracted/2026-04-17_bashvlas_main-content-script-james-bond.md](../extracted/2026-04-17_bashvlas_main-content-script-james-bond.md) **(c)**
 
 ## keepalive
 
 - [MV3, (inactive) service workers, and alarms](../forums/2026-04-16_google-group_sw-event-listeners-top-level.md) **(b)** · _forum_
+- [extracted/2026-04-16_google-group_sw-event-listeners-top-level.md](../extracted/2026-04-16_google-group_sw-event-listeners-top-level.md) **(b)**
 
 ## lifecycle
 
 - [MV3 service worker broken after auto-update](../forums/2026-04-16_google-group_auto-update-sw-race-condition.md) **(b)** · _forum_
 - [MV3, (inactive) service workers, and alarms](../forums/2026-04-16_google-group_sw-event-listeners-top-level.md) **(b)** · _forum_
+- [extracted/2026-04-16_google-group_auto-update-sw-race-condition.md](../extracted/2026-04-16_google-group_auto-update-sw-race-condition.md) **(b)**
+- [extracted/2026-04-16_google-group_sw-event-listeners-top-level.md](../extracted/2026-04-16_google-group_sw-event-listeners-top-level.md) **(b)**
+
+## main-world
+
+- [MAIN Content Script in Chrome Extensions is like James Bond](../blogs/2026-04-17_bashvlas_main-content-script-james-bond.md) **(c)** · _blog_
+- [extracted/2026-04-17_bashvlas_main-content-script-james-bond.md](../extracted/2026-04-17_bashvlas_main-content-script-james-bond.md) **(c)**
 
 ## malicious-extensions
 
+- [Let's Talk About Malicious Browser Extensions: Part 1](../blogs/2026-04-17_frisbie-substack_malicious-extensions-part-1.md) **(c)** · _blog_
+- [Let's Talk About Malicious Browser Extensions: Part 2](../blogs/2026-04-17_frisbie-substack_malicious-extensions-part-2.md) **(c)** · _blog_
+- [Let's Talk About Malicious Browser Extensions: Part 3](../blogs/2026-04-17_frisbie-substack_malicious-extensions-part-3.md) **(c)** · _blog_
 - [Analysis of an advanced malicious Chrome extension | Almost Secure](../blogs/2026-04-16_palant_02-03-analysis-of-an-advanced-malicious-chrome-extension.md) **(c)** · _blog_
 
 ## manifest-v3
@@ -46,44 +126,162 @@
 - [Malicious extensions circumvent Google’s remote code ban | Almost Secure](../blogs/2026-04-16_palant_01-20-malicious-extensions-circumvent-googles-remote-code-ba.md) **(c)** · _blog_
 - [MV3, (inactive) service workers, and alarms](../forums/2026-04-16_google-group_sw-event-listeners-top-level.md) **(b)** · _forum_
 - [chrome.permissions  |  API  |  Chrome for Developers](../official/2026-04-16_chrome-developers_reference-api-permissions.md) **(a)** · _official_
+- [extracted/2026-04-16_google-group_auto-update-sw-race-condition.md](../extracted/2026-04-16_google-group_auto-update-sw-race-condition.md) **(b)**
+- [extracted/2026-04-16_google-group_sw-event-listeners-top-level.md](../extracted/2026-04-16_google-group_sw-event-listeners-top-level.md) **(b)**
+- [extracted/2026-04-16_palant_01-20-malicious-extensions-circumvent-googles-remote-code-ba.md](../extracted/2026-04-16_palant_01-20-malicious-extensions-circumvent-googles-remote-code-ba.md) **(c)**
+- [extracted/2026-04-16_palant_02-03-analysis-of-an-advanced-malicious-chrome-extension.md](../extracted/2026-04-16_palant_02-03-analysis-of-an-advanced-malicious-chrome-extension.md) **(c)**
+- [extracted/2026-04-17_bashvlas_update-without-review.md](../extracted/2026-04-17_bashvlas_update-without-review.md) **(c)**
+
+## metadata
+
+- [Yellow Zinc: Chrome Extension Violations for Metadata and Listing Issues](../blogs/2026-04-17_coditude_yellow-zinc-metadata.md) **(c)** · _blog_
 
 ## moderation
 
 - [Chrome Web Store is a mess | Almost Secure](../blogs/2026-04-16_palant_01-13-chrome-web-store-is-a-mess.md) **(c)** · _blog_
+- [extracted/2026-04-16_palant_01-13-chrome-web-store-is-a-mess.md](../extracted/2026-04-16_palant_01-13-chrome-web-store-is-a-mess.md) **(c)**
+
+## mv3
+
+- [Blue Argon - MV3 Additional Requirements Explained](../blogs/2026-04-17_coditude_blue-argon-mv3.md) **(c)** · _blog_
+
+## optional-host-permissions
+
+- [extracted/2026-04-16_chrome-developers_reference-api-permissions.md](../extracted/2026-04-16_chrome-developers_reference-api-permissions.md) **(a)**
+
+## ownership-changes
+
+- [Tracking Browser Extension Ownership - by Matt Frisbie](../blogs/2026-04-17_frisbie-substack_tracking-extension-ownership.md) **(c)** · _blog_
+- [extracted/2026-04-17_frisbie-substack_tracking-extension-ownership.md](../extracted/2026-04-17_frisbie-substack_tracking-extension-ownership.md) **(c)**
+
+## ownership-transfer
+
+- [extracted/2026-04-16_palant_02-03-analysis-of-an-advanced-malicious-chrome-extension.md](../extracted/2026-04-16_palant_02-03-analysis-of-an-advanced-malicious-chrome-extension.md) **(c)**
 
 ## permissions
 
+- [Purple Potassium: How to Correct Permission Abuse in Chrome Extensions](../blogs/2026-04-17_coditude_purple-potassium-permissions.md) **(c)** · _blog_
 - [Avoiding a "Host Permission" Review Delay When Publishing a Chrome Extension | Alex MacArthur](../blogs/2026-04-16_macarthur_posts-chrome-extension-host-permission.md) **(c)** · _blog_
 - [publishing delayed - Broad host permissions](../forums/2026-04-16_google-group_content-scripts-matches-review.md) **(b)** · _forum_
 - [chrome.permissions  |  API  |  Chrome for Developers](../official/2026-04-16_chrome-developers_reference-api-permissions.md) **(a)** · _official_
+- [extracted/2026-04-16_chrome-developers_reference-api-permissions.md](../extracted/2026-04-16_chrome-developers_reference-api-permissions.md) **(a)**
+- [extracted/2026-04-16_google-group_content-scripts-matches-review.md](../extracted/2026-04-16_google-group_content-scripts-matches-review.md) **(b)**
+- [extracted/2026-04-16_google-group_review-times-deferred-publishing.md](../extracted/2026-04-16_google-group_review-times-deferred-publishing.md) **(b)**
+- [extracted/2026-04-16_macarthur_posts-chrome-extension-host-permission.md](../extracted/2026-04-16_macarthur_posts-chrome-extension-host-permission.md) **(c)**
 
 ## policy-enforcement
 
 - [Chrome Web Store is a mess | Almost Secure](../blogs/2026-04-16_palant_01-13-chrome-web-store-is-a-mess.md) **(c)** · _blog_
 - [Malicious extensions circumvent Google’s remote code ban | Almost Secure](../blogs/2026-04-16_palant_01-20-malicious-extensions-circumvent-googles-remote-code-ba.md) **(c)** · _blog_
+- [extracted/2026-04-16_palant_01-13-chrome-web-store-is-a-mess.md](../extracted/2026-04-16_palant_01-13-chrome-web-store-is-a-mess.md) **(c)**
+- [extracted/2026-04-17_coditude_rejection-codes-overview.md](../extracted/2026-04-17_coditude_rejection-codes-overview.md) **(c)**
+
+## privacy
+
+- [Understanding Purple Family Rejection Codes: Resolving User Data Privacy](../blogs/2026-04-17_coditude_purple-family-privacy.md) **(c)** · _blog_
+
+## purple
+
+- [Understanding Purple Family Rejection Codes: Resolving User Data Privacy](../blogs/2026-04-17_coditude_purple-family-privacy.md) **(c)** · _blog_
+- [Purple Potassium: How to Correct Permission Abuse in Chrome Extensions](../blogs/2026-04-17_coditude_purple-potassium-permissions.md) **(c)** · _blog_
+
+## quick-reference
+
+- [extracted/2026-04-17_coditude_rejection-codes-overview.md](../extracted/2026-04-17_coditude_rejection-codes-overview.md) **(c)**
 
 ## race-condition
 
 - [MV3 service worker broken after auto-update](../forums/2026-04-16_google-group_auto-update-sw-race-condition.md) **(b)** · _forum_
 
+## rejection-codes
+
+- [Blue Argon - MV3 Additional Requirements Explained](../blogs/2026-04-17_coditude_blue-argon-mv3.md) **(c)** · _blog_
+- [Blue Series: Prohibited Products in the Chrome Web Store](../blogs/2026-04-17_coditude_blue-series-prohibited-products.md) **(c)** · _blog_
+- [Understanding Purple Family Rejection Codes: Resolving User Data Privacy](../blogs/2026-04-17_coditude_purple-family-privacy.md) **(c)** · _blog_
+- [Purple Potassium: How to Correct Permission Abuse in Chrome Extensions](../blogs/2026-04-17_coditude_purple-potassium-permissions.md) **(c)** · _blog_
+- [Chrome Web Store Rejection Codes: Meaning & Fixes](../blogs/2026-04-17_coditude_rejection-codes-overview.md) **(c)** · _blog_
+- [Yellow Zinc: Chrome Extension Violations for Metadata and Listing Issues](../blogs/2026-04-17_coditude_yellow-zinc-metadata.md) **(c)** · _blog_
+- [extracted/2026-04-17_coditude_rejection-codes-overview.md](../extracted/2026-04-17_coditude_rejection-codes-overview.md) **(c)**
+
+## reliability
+
+- [extracted/2026-04-16_google-group_auto-update-sw-race-condition.md](../extracted/2026-04-16_google-group_auto-update-sw-race-condition.md) **(b)**
+
 ## remote-code
 
 - [Malicious extensions circumvent Google’s remote code ban | Almost Secure](../blogs/2026-04-16_palant_01-20-malicious-extensions-circumvent-googles-remote-code-ba.md) **(c)** · _blog_
+- [extracted/2026-04-16_palant_01-20-malicious-extensions-circumvent-googles-remote-code-ba.md](../extracted/2026-04-16_palant_01-20-malicious-extensions-circumvent-googles-remote-code-ba.md) **(c)**
+- [extracted/2026-04-16_palant_02-03-analysis-of-an-advanced-malicious-chrome-extension.md](../extracted/2026-04-16_palant_02-03-analysis-of-an-advanced-malicious-chrome-extension.md) **(c)**
+
+## remote-config
+
+- [Update Your Chrome Extensions Without Review](../blogs/2026-04-17_bashvlas_update-without-review.md) **(c)** · _blog_
+
+## remote-configuration
+
+- [extracted/2026-04-17_bashvlas_update-without-review.md](../extracted/2026-04-17_bashvlas_update-without-review.md) **(c)**
+
+## reporting-process
+
+- [extracted/2026-04-16_palant_01-13-chrome-web-store-is-a-mess.md](../extracted/2026-04-16_palant_01-13-chrome-web-store-is-a-mess.md) **(c)**
+
+## review-evasion
+
+- [extracted/2026-04-16_palant_01-20-malicious-extensions-circumvent-googles-remote-code-ba.md](../extracted/2026-04-16_palant_01-20-malicious-extensions-circumvent-googles-remote-code-ba.md) **(c)**
+- [extracted/2026-04-16_palant_02-03-analysis-of-an-advanced-malicious-chrome-extension.md](../extracted/2026-04-16_palant_02-03-analysis-of-an-advanced-malicious-chrome-extension.md) **(c)**
 
 ## review-times
 
 - [Extension review time. How to improve it?](../forums/2026-04-16_google-group_review-times-deferred-publishing.md) **(b)** · _forum_
+- [extracted/2026-04-16_google-group_review-times-deferred-publishing.md](../extracted/2026-04-16_google-group_review-times-deferred-publishing.md) **(b)**
+
+## runtime-permissions
+
+- [extracted/2026-04-16_chrome-developers_reference-api-permissions.md](../extracted/2026-04-16_chrome-developers_reference-api-permissions.md) **(a)**
+
+## scripting-api
+
+- [extracted/2026-04-16_macarthur_posts-chrome-extension-host-permission.md](../extracted/2026-04-16_macarthur_posts-chrome-extension-host-permission.md) **(c)**
 
 ## security
 
+- [Let's Talk About Malicious Browser Extensions: Part 1](../blogs/2026-04-17_frisbie-substack_malicious-extensions-part-1.md) **(c)** · _blog_
+- [Let's Talk About Malicious Browser Extensions: Part 2](../blogs/2026-04-17_frisbie-substack_malicious-extensions-part-2.md) **(c)** · _blog_
+- [Let's Talk About Malicious Browser Extensions: Part 3](../blogs/2026-04-17_frisbie-substack_malicious-extensions-part-3.md) **(c)** · _blog_
+- [Tracking Browser Extension Ownership - by Matt Frisbie](../blogs/2026-04-17_frisbie-substack_tracking-extension-ownership.md) **(c)** · _blog_
 - [Malicious extensions circumvent Google’s remote code ban | Almost Secure](../blogs/2026-04-16_palant_01-20-malicious-extensions-circumvent-googles-remote-code-ba.md) **(c)** · _blog_
 - [Analysis of an advanced malicious Chrome extension | Almost Secure](../blogs/2026-04-16_palant_02-03-analysis-of-an-advanced-malicious-chrome-extension.md) **(c)** · _blog_
+- [extracted/2026-04-16_palant_01-20-malicious-extensions-circumvent-googles-remote-code-ba.md](../extracted/2026-04-16_palant_01-20-malicious-extensions-circumvent-googles-remote-code-ba.md) **(c)**
+- [extracted/2026-04-16_palant_02-03-analysis-of-an-advanced-malicious-chrome-extension.md](../extracted/2026-04-16_palant_02-03-analysis-of-an-advanced-malicious-chrome-extension.md) **(c)**
+- [extracted/2026-04-17_frisbie-substack_tracking-extension-ownership.md](../extracted/2026-04-17_frisbie-substack_tracking-extension-ownership.md) **(c)**
 
 ## service-worker
 
 - [MV3 service worker broken after auto-update](../forums/2026-04-16_google-group_auto-update-sw-race-condition.md) **(b)** · _forum_
 - [MV3, (inactive) service workers, and alarms](../forums/2026-04-16_google-group_sw-event-listeners-top-level.md) **(b)** · _forum_
+- [extracted/2026-04-16_google-group_auto-update-sw-race-condition.md](../extracted/2026-04-16_google-group_auto-update-sw-race-condition.md) **(b)**
+- [extracted/2026-04-16_google-group_sw-event-listeners-top-level.md](../extracted/2026-04-16_google-group_sw-event-listeners-top-level.md) **(b)**
+
+## supply-chain
+
+- [extracted/2026-04-17_frisbie-substack_tracking-extension-ownership.md](../extracted/2026-04-17_frisbie-substack_tracking-extension-ownership.md) **(c)**
+
+## sync-storage
+
+- [extracted/2026-04-16_google-group_sw-event-listeners-top-level.md](../extracted/2026-04-16_google-group_sw-event-listeners-top-level.md) **(b)**
 
 ## teardown
 
 - [Analysis of an advanced malicious Chrome extension | Almost Secure](../blogs/2026-04-16_palant_02-03-analysis-of-an-advanced-malicious-chrome-extension.md) **(c)** · _blog_
+
+## update-triggers
+
+- [extracted/2026-04-17_bashvlas_update-without-review.md](../extracted/2026-04-17_bashvlas_update-without-review.md) **(c)**
+
+## user-awareness
+
+- [extracted/2026-04-17_frisbie-substack_tracking-extension-ownership.md](../extracted/2026-04-17_frisbie-substack_tracking-extension-ownership.md) **(c)**
+
+## yellow
+
+- [Yellow Zinc: Chrome Extension Violations for Metadata and Listing Issues](../blogs/2026-04-17_coditude_yellow-zinc-metadata.md) **(c)** · _blog_
