@@ -63,13 +63,21 @@ Factory skills may wrap externally-published skills rather than reimplementing t
 npx skills add <namespace>/<skill-name>
 ```
 
-| External skill | Install | Wrapped by | Purpose |
-|---|---|---|---|
-| `heygen-com/hyperframes` | `npx skills add heygen-com/hyperframes` | `cws-video` (planned) | Launch video generation for CWS listings. |
+| External skill | Install | Classification | Wrapped by | Purpose |
+|---|---|---|---|---|
+| `heygen-com/hyperframes` | `npx skills add heygen-com/hyperframes` | **Required** (default ship path) | `cws-video` (planned, Session 6) | Launch video generation for CWS listings. Taste decision: video is on by default because extensions with videos convert markedly better and the asset doubles for ProductHunt / Twitter / LinkedIn launches. Users who genuinely don't want a video delete `video/` to opt out. |
+
+### Classification: Required vs. Optional
+
+Two tiers of external dependencies, analogous to the opt-in-secrets pattern:
+
+- **Optional** external skills are convenience layers. Absent = feature silently unavailable; present = feature works. A missing optional skill MUST NOT produce a red ship-check error on a fresh clone that hasn't installed it.
+- **Required** external skills are part of the factory's default ship path. Absent = the wrapping factory skill detects the missing install and walks the user through `npx skills add` before proceeding. The corresponding validator rule (e.g. `ship-ready-video`) still fires — because the asset itself is required — but the factory skill explains the install step rather than blaming the user.
 
 When adding a new external dependency:
 
 1. Install and evaluate the skill locally before adopting.
-2. Add a row to the table above.
-3. The wrapping factory skill declares `requires: [heygen-com/hyperframes]` in its frontmatter.
-4. The wrapper probes for presence (e.g., `npx skills list | grep heygen-com/hyperframes`) and, on miss, prints the install command rather than erroring. Treat external deps like opt-in secrets: no red CI on a fresh clone that hasn't installed them.
+2. Decide Required or Optional and justify it. Default to Optional unless there's a clear taste / user-outcome reason to make it Required.
+3. Add a row to the table above with the classification.
+4. The wrapping factory skill declares `requires: [heygen-com/hyperframes]` in its frontmatter.
+5. The wrapper probes for presence (e.g., `npx skills list | grep heygen-com/hyperframes`) and, on miss, either (Required) walks the install step or (Optional) no-ops with an informational message.

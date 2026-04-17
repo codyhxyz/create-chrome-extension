@@ -291,6 +291,94 @@ Sessions 1 and 2 are the two "ground floors." After those, everything else slots
 
 ---
 
+## Session 6 — `cws-video` skill + default-on infrastructure
+
+**Kind:** Skill wrapping an external skill + validator rule + small config scaffold. Parallel to Session 4 (`cws-screens`) but smaller — the external skill does the generation work, we just configure and validate.
+
+**Goal:** Make a launch-video asset part of the default factory ship flow. A promo video substantially lifts CWS install conversion; the same asset doubles as a launch asset for ProductHunt, Twitter, LinkedIn. The factory ships with video on by default; users who genuinely don't want one delete `video/` (same escape-hatch pattern as `screenshots/`).
+
+**Prerequisites:** Ecosystem skill [`heygen-com/hyperframes`](https://github.com/heygen-com/hyperframes) — install via `npx skills add heygen-com/hyperframes`. This is a hard dep for the default ship path (unlike, say, CWS API OAuth secrets, which are opt-in). The wrapping skill detects missing install and walks the user through `npx skills add` rather than silently skipping.
+
+**Deliverables:**
+
+1. `/video/config.ts` — declarative, parallel to `screenshots/config.ts`. Factory default has placeholder content obviously needing customization. Fields (reconcile with what hyperframes expects when writing this session): script/narration, visual beats, target length (CWS caps at 30 sec for embedded promo; external launches want 60–90 sec), aspect ratio, export targets (YouTube URL format for CWS; MP4 at common aspect ratios for socials).
+
+2. `/video/` directory is shipped in the factory by default. If the user chooses to skip video entirely, they delete the directory (matches how `screenshots/` is handled — no special "disable video" flag).
+
+3. `scripts/validate-cws.ts` — new rule `shipReadyVideo(ctx: Context): Finding[]` in `SHIP_ONLY_RULES`:
+   - If `/video/config.ts` doesn't exist: return `[]` (user explicitly removed the directory — opt-out).
+   - If config still has factory placeholders: error (analogous to `ship-ready-screenshots`).
+   - If no exported file in `.output/videos/` (or wherever hyperframes writes): error.
+   - Ordering: PNG-style shift (first run tells user "no video found"; after generation, if config still has placeholders, tell them to regenerate with real copy).
+
+4. `/skills/cws-video/SKILL.md` — thin wrapper:
+   - Frontmatter `requires: [heygen-com/hyperframes]`.
+   - Phase A: probe for hyperframes installation; if missing, print `npx skills add heygen-com/hyperframes`, wait for confirmation.
+   - Phase B: walk user through video config (script, visual style, length) with examples of good ones (punchy hook, single value prop, clear CTA).
+   - Phase C: invoke hyperframes with the config.
+   - Phase D: verify output exists and update `ship-ready-video` passes.
+   - Frontmatter `writes: [video/config.ts]`.
+
+5. Update `scripts/validate-cws.ts` comment header + any count references (ship mode becomes 18 rules).
+
+6. Update `skills/cws-init/SKILL.md` — Phase E (screenshots) should also invoke `cws-video` as a parallel delegation. Or add a new Phase E+ explicitly. Init should walk the user through video alongside screenshots, since both are default-on assets.
+
+7. Update `skills/cws-ship/SKILL.md` — Phase A rule-id mapping should route `ship-ready-video` to `cws-video`. Same delegation pattern as `ship-ready-screenshots` → `cws-screens`.
+
+8. `npm run video` script in `package.json` — one-shot invocation (if hyperframes has a CLI entrypoint usable from an npm script; otherwise this may be skill-only).
+
+9. `docs/05-launch-materials.md` — add a video section parallel to the screenshots section; distinguish video spec for CWS (YouTube embed, ≤30 sec preview) vs. social (60–90 sec MP4, etc.).
+
+10. `skills/README.md` — update the External dependencies table: `heygen-com/hyperframes` is **Required** (not optional) for the default ship path.
+
+11. `.gitignore` — add `.output/videos/`.
+
+12. `ARCHITECTURE.md`:
+    - Mark Session 6 done in Planned extensions.
+    - Automation surface table: add `npm run video` row if it's a direct command.
+    - Convention update: document the "hard external dep vs. optional external dep" distinction in Skill conventions.
+
+**Constraints — do NOT violate:**
+
+- Factory invariant shifts with this session: `npm run check:cws:ship` on a fresh clone will now have **6 errors** (5 existing + `ship-ready-video`). That's correct and expected. Update the ARCHITECTURE.md / ROADMAP test commands accordingly.
+- Rule id `ship-ready-video` is public API; don't rename after this session.
+- If the hyperframes skill API changes (new field, removed field), this is a coordination burden — document which hyperframes version we're pinned against in `skills/cws-video/SKILL.md` and `skills/README.md`.
+- Don't reimplement video generation. The whole point is we delegate to hyperframes. If hyperframes is missing capability we need (e.g., specific aspect ratio), file an issue upstream; don't fork the work.
+
+**Acceptance:**
+
+```
+npm run compile                                 # exits 0
+npm run check:cws                               # passes (structural; no video rule there)
+npm run check:cws:ship                          # 6 errors now (5 + ship-ready-video)
+jq rule from JSON                               # includes "ship-ready-video"
+ls video/config.ts                              # exists with placeholders
+ls skills/cws-video/SKILL.md                    # exists
+# With hyperframes installed and run through the skill:
+ls .output/videos/                              # at least one exported file
+npm run check:cws:ship 2>&1 | grep ship-ready-video   # no longer fires
+```
+
+Edge case — user opts out:
+```
+rm -rf video/                                   # explicit opt-out
+npm run check:cws:ship                          # 5 errors, ship-ready-video silent (rule no-ops on absent dir)
+```
+
+**Out of scope:**
+- Multi-language voiceover / localization (defer).
+- A/B testing variants (defer).
+- Analytics on which videos convert (defer).
+
+**Risks:**
+- Hyperframes API / install flow may shift. Mitigation: detect-and-guide rather than assume.
+- External-dep friction could reduce factory adoption ("I have to install another thing?"). Mitigation: make the install step a single copyable command in every error message.
+- Video quality is judgment-heavy; the validator rule only checks presence + placeholder-escape, not actual quality. That's correct — presence is deterministic, quality is a conversation (cws-video skill handles the quality interview).
+
+**Estimate:** Half day. Smaller than Session 4 because hyperframes does the heavy lifting.
+
+---
+
 ## Cross-cutting concerns
 
 These apply to every session and should be checked before calling any session "done."
@@ -314,10 +402,12 @@ If you have a week: Sessions 1, 2, 3. That's the flagship flow end-to-end (conte
 
 Session 4 (screenshots) is best scheduled as its own focused day — it's the largest and the subject matter (visual design, headless Chrome, Next.js) is distinct from the rest of the work.
 
-Session 5 (init) last — it assumes everything else exists.
+Session 5 (init) after 2 and 4 ship — it assumes those exist to delegate to.
+
+Session 6 (video) after 3 and 5 ship — retrofits delegation into both of those skills, so they need to exist first. Can parallel with other follow-on work.
 
 ---
 
 ## When this roadmap is "done"
 
-All five sessions acceptance-criteria complete. ARCHITECTURE.md's "Planned extensions" table has every item marked done. A new contributor who clones this repo can type `/cws-init` and go from zero to a live extension without ever being asked to memorize a CWS rule or remember which command to run — that's the success state the philosophy is pointing at.
+All six sessions acceptance-criteria complete. ARCHITECTURE.md's "Planned extensions" table has every item marked done. A new contributor who clones this repo can type `/cws-init` and go from zero to a live extension — including screenshots AND a launch video — without ever being asked to memorize a CWS rule or remember which command to run. That's the success state the philosophy is pointing at.
