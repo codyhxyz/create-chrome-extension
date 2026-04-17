@@ -62,7 +62,7 @@ npm run ship
 Which expands to:
 
 ```
-npm run check:cws:ship   # 16 rules: structural + listing/welcome readiness + listing drift
+npm run check:cws:ship   # 18 rules: structural + listing/welcome/screenshots/video readiness + listing drift
 tsx scripts/version-sync.ts  # local package.json version > live CWS version
 wxt zip                  # build and package for CWS
 tsx scripts/publish-cws.ts   # upload, publish, poll status

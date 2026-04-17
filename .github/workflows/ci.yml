@@ -28,5 +28,8 @@ jobs:
       - name: CWS structural check
         run: npx tsx scripts/validate-cws.ts
 
+      - name: Validator snapshot regression test
+        run: npx tsx scripts/__tests__/validator-snapshot.ts
+
       - name: Firefox build
         run: npm run build:firefox

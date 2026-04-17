@@ -588,12 +588,14 @@ Skill identifies: 4 content errors + 1 screenshots error. Routing:
 
 - `listing-ready-name`, `listing-ready-description`, `ship-ready-optional-host`, `ship-ready-welcome-config` → delegate to `cws-content`.
 - `ship-ready-screenshots` → delegate to `cws-screens`.
+- `ship-ready-video` → delegate to `cws-video`.
 
 Skill says:
 
-> The ship validator found 5 errors:
+> The ship validator found 6 errors:
 > - 4 content issues (listing copy, origins, welcome config) → delegating to `cws-content`.
 > - 1 screenshots issue (no PNGs yet) → delegating to `cws-screens` after content is done.
+> - 1 video issue (no exported MP4 yet) → delegating to `cws-video` after screenshots are done.
 >
 > Invoking `cws-content` now.
 
@@ -603,20 +605,38 @@ Skill re-runs validator:
 
 ```json
 {
-  "summary": { "errors": 1, "warnings": 0 },
+  "summary": { "errors": 2, "warnings": 0 },
   "findings": [
-    { "rule": "ship-ready-screenshots", "severity": "error", ... }
+    { "rule": "ship-ready-screenshots", "severity": "error", ... },
+    { "rule": "ship-ready-video", "severity": "error", ... }
   ]
 }
 ```
 
-Good. Content is green. Screenshots remain.
+Good. Content is green. Screenshots and video remain.
 
 Skill says:
 
-> Content is green. One error remains: `ship-ready-screenshots`. Invoking `cws-screens`.
+> Content is green. Two errors remain: `ship-ready-screenshots` and `ship-ready-video`. Invoking `cws-screens` next.
 
 Skill invokes `cws-screens`. User interviews through 5 screenshots (hero / popup / options / welcome / inline-badge), generates PNGs. `cws-screens` reports done.
+
+Skill re-runs validator:
+
+```json
+{
+  "summary": { "errors": 1, "warnings": 0 },
+  "findings": [
+    { "rule": "ship-ready-video", "severity": "error", ... }
+  ]
+}
+```
+
+Skill says:
+
+> Screenshots green. One error remains: `ship-ready-video`. Invoking `cws-video` — it'll interview you for the 30-second hook + beats and hand off to `heygen-com/hyperframes` for generation.
+
+Skill invokes `cws-video`. User interviews through hook, 5 beats, export targets (cws/productHunt/socialHorizontal). Hyperframes generates three MP4s in `.output/videos/`. `cws-video` reports done.
 
 Skill re-runs validator:
 
@@ -712,10 +732,12 @@ End of run.
 ### State transitions summarized
 
 ```
-A. validator red    (5 errors)
+A. validator red    (6 errors)
    ↓ delegate cws-content (4 content rules)
-A. validator red    (1 error: screenshots)
+A. validator red    (2 errors: screenshots + video)
    ↓ delegate cws-screens
+A. validator red    (1 error: video)
+   ↓ delegate cws-video
 A. validator green  (0 errors)
    ↓
 B. version-sync skipped (no secrets)

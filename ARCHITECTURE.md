@@ -129,6 +129,18 @@ Conventions for how skills are laid out, what they can assume, and how they inte
 - **Skills may delete files only during first-run profile-strip, and only with explicit user confirmation.** Established by `cws-init` (Session 5). The strip is destructive and scope-limited: the skill declares the exact delete set per profile in its `SKILL.md`, presents the plan, waits for `y/n`, then executes. Deletions outside the declared set are forbidden. Skills invoked on an already-initialized factory must detect the not-fresh state (marker file, non-default manifest name) and refuse to re-delete.
 - **Skills may declare external skill dependencies.** A factory skill can wrap an externally-published skill rather than reimplementing it. Declare the dependency in frontmatter (`requires: ['heygen-com/hyperframes']`) and in `skills/README.md` under "External dependencies." Install via `npx skills add <namespace/skill>`. Factory skills should fail gracefully when a required external skill is not installed — detect with a probe, print the install command, no-op. This keeps the ecosystem extensible: we don't re-solve video generation, screenshot design, privacy-policy authoring, etc. when someone has already shipped a great skill for it.
 
+### Honest note on skill-to-skill delegation (today)
+
+Skills in this repo say "delegate to `cws-content`" or "invoke `cws-screens`." **In practice, today, that means the orchestrating skill writes a text prompt telling the user to invoke the target skill manually.** There is no runtime mechanism for one skill to call another. The plugin runtime that would route skill-to-skill invocations automatically does not exist yet in this repo's environment.
+
+What this means concretely:
+
+- A user walking through `/cws-ship` will see "Invoking `cws-content` to fix the 4 content errors" and then needs to actually run `/cws-content` themselves.
+- When `cws-content` finishes, the user re-invokes `/cws-ship` to resume.
+- The delegation is a promise the skill makes the user keep. It is not an automatic call.
+
+This is fine — the skills are still correctly scoped (one responsibility each, stable rule-id contracts, no recipe duplication). But it is not the frictionless hand-off the architecture diagram implies. If and when a runtime can route calls between skills, the existing skill files should just work without structural changes; the `invokes:` frontmatter is already the contract the runtime would use. Until then: the user is the router.
+
 ---
 
 ## How to extend

@@ -14,6 +14,7 @@
     "compile": "tsc --noEmit",
     "check:cws": "wxt build && tsx scripts/validate-cws.ts",
     "check:cws:ship": "wxt build && tsx scripts/validate-cws.ts --ship",
+    "test:validator": "wxt build && tsx scripts/__tests__/validator-snapshot.ts",
     "version-sync": "tsx scripts/version-sync.ts",
     "ship": "npm run check:cws:ship && tsx scripts/version-sync.ts && wxt zip && tsx scripts/publish-cws.ts",
     "capture:source": "tsx sources/_scripts/capture.ts",

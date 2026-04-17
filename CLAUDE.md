@@ -12,7 +12,7 @@ The canonical design doc is [**ARCHITECTURE.md**](ARCHITECTURE.md) — division 
 |---|---|---|---|
 | `npm run compile` | manual, CI | TypeScript correctness | ✓ green |
 | `npm run check:cws` | every push to CI | well-formed extension structure (13 rules) | ✓ green |
-| `npm run check:cws:ship` | manual | structural + listing/welcome content filled in (15 rules) | ✗ red (by design) |
+| `npm run check:cws:ship` | manual | structural + listing/welcome/screenshots/video content filled in (18 rules; `listing-drift` opt-in on CWS secrets) | ✗ red (by design) |
 | `npm run zip` | manual, to package for CWS upload | **gated on `check:cws:ship`** — no zip is produced until ship checks pass | ✗ refuses to run (by design) |
 
 The user can't accidentally ship an un-customized fork: `npm run zip` is the only path to a submittable artifact, and it refuses until ship mode is green. The user never needs to know to "remember to run the validator" — it's wired into the only command that matters.

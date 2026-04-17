@@ -58,7 +58,13 @@ So "unwritten" is wrong in letter but right in spirit. Your first submission wit
 
 - **(b) Broad content-script `matches` count as "broad host permissions" for review.** Simeon Vincent: "your 'content_scripts' can also affect reviews. Specifically, the 'matches' field." [Source.](https://groups.google.com/a/chromium.org/g/chromium-extensions/c/S1_uqpDFVzY) *Validator: `content-scripts-matches-breadth`.*
 
-- **(a+b) Non-core features belong in `optional_permissions` / `optional_host_permissions` + `chrome.permissions.request()` from a user gesture.** [chrome.permissions](https://developer.chrome.com/docs/extensions/reference/api/permissions) · [Nearform guide](https://nearform.com/digital-community/extension-reviews/). The factory ships a reference welcome/onboarding flow at `entrypoints/welcome/` — see `App.tsx` for the request pattern.
+- **(a+b) Non-core features belong in `optional_permissions` / `optional_host_permissions` + `chrome.permissions.request()` from a user gesture.** [chrome.permissions](https://developer.chrome.com/docs/extensions/reference/api/permissions) · [Nearform guide](https://nearform.com/digital-community/extension-reviews/). The factory ships a reference welcome/onboarding flow at `entrypoints/welcome/` — see `App.tsx` for the request pattern. [Extracted.](../sources/extracted/2026-04-16_chrome-developers_reference-api-permissions.md)
+
+- **(a) Nine permissions CANNOT be optional** — they're install-time or nothing: `debugger`, `declarativeNetRequest`, `devtools`, `geolocation`, `mdns`, `proxy`, `tts`, `ttsEngine`, `wallpaper`. If you put one of these in `optional_permissions`, the manifest validates but the runtime request silently fails. Most niche, but `declarativeNetRequest`, `devtools`, and `proxy` are common in real extensions — plan the manifest accordingly. *Validator: `optional-permissions-non-optional-listed`.* [Extracted.](../sources/extracted/2026-04-16_chrome-developers_reference-api-permissions.md)
+
+- **(a) Chrome 133+: `chrome.permissions.addHostAccessRequest()`** surfaces a per-tab "this site wants access" prompt only when the extension *could* be granted access, cleaner than blanket `request()`. Feature-detect and use it as progressive enhancement; fall back to `request()` on older Chrome. [Extracted.](../sources/extracted/2026-04-16_chrome-developers_reference-api-permissions.md)
+
+- **(b+c) Diagnostic: the developer-console banner** — *"Due to the Host Permission, your extension may require an in-depth review which will delay publishing"* — fires on upload. Its usual cause is broad `content_scripts.matches`, **not** broad `host_permissions`. If you see the banner and your `permissions` array is empty, check content-script matches first. Simeon Vincent confirmed this directly. [Extracted forum.](../sources/extracted/2026-04-16_google-group_content-scripts-matches-review.md) · [Extracted MacArthur.](../sources/extracted/2026-04-16_macarthur_posts-chrome-extension-host-permission.md)
 
 - **(a) Permissions commonly declared but not needed:**
   - `tabs` — only for URL/title/favIconUrl of *other* tabs; not needed for your own popup.
@@ -87,6 +93,10 @@ So "unwritten" is wrong in letter but right in spirit. Your first submission wit
 
 - **(a) No remotely hosted code. Ever.** Rejection code: **Blue Argon.** Violations: `<script src="https://...">`, `eval()` of a fetched string, dynamic `import()` of a remote URL, any interpreter executing remote commands. Remote *data* is fine only if it contains no logic. [Migration guide](https://developer.chrome.com/docs/extensions/develop/migrate/remote-hosted-code) · [MV3 policy](https://developer.chrome.com/docs/webstore/program-policies/mv3-requirements). *Validator: `remote-code-patterns`.*
 
+- **(a+c) Remote *data* vs remote *code* — the legit/malware line.** Google [officially recommends](https://developer.chrome.com/docs/extensions/develop/migrate/improve-security#configuration-drive) fetching configuration (site allow-lists, feature flags, strings) from a server — it keeps the reviewable code surface stable. The test: could the fetched payload be passed to `eval`/`Function()` or rendered as HTML with inline event handlers? If yes, you've crossed into malware territory. The factory should ship remote config as typed JSON with schema validation, cached in `chrome.storage.local`, never string-templated into DOM. [Extracted bashvlas.](../sources/extracted/2026-04-17_bashvlas_update-without-review.md) · [Extracted palant (contrast).](../sources/extracted/2026-04-16_palant_01-20-malicious-extensions-circumvent-googles-remote-code-ba.md)
+
+- **(c) The four-step MV3 remote-code-ban bypass — known malware signature, expect scrutiny.** Malicious extensions chain: (1) all-sites permissions under a cover story, (2) server config that contains HTML with inline event handlers, (3) HTML injected into page context (where MV3's ban doesn't apply), (4) `declarativeNetRequest` rules stripping CSP / X-Frame-Options headers so the page-context JS runs. Each step alone is legal; the pattern is the problem. *Validator: `dnr-modify-headers-security` — flags any `modifyHeaders` rule targeting `content-security-policy`, `x-frame-options`, or `permissions-policy` with `operation: remove`.* [Extracted palant.](../sources/extracted/2026-04-16_palant_01-20-malicious-extensions-circumvent-googles-remote-code-ba.md) · [Extracted teardown.](../sources/extracted/2026-04-16_palant_02-03-analysis-of-an-advanced-malicious-chrome-extension.md)
+
 - **(a) CSP for `extension_pages` is locked.** Only `script-src` values allowed: `'self'`, `'wasm-unsafe-eval'`, and (unpacked only) `localhost`/`127.0.0.1`. No `'unsafe-eval'`, no CDN origins, no inline scripts. [Source.](https://developer.chrome.com/docs/extensions/reference/manifest/content-security-policy) *Validator: `csp-extension-pages`.*
 
 - **(a) Obfuscation is disallowed (Red Titanium).** Base64-encoded logic and character-encoding tricks count. Minification is allowed but slows review. Submit "code as authored." [Source.](https://developer.chrome.com/docs/webstore/review-process)
@@ -97,7 +107,9 @@ So "unwritten" is wrong in letter but right in spirit. Your first submission wit
 
 - **(a) 30-second idle timeout; global state does not survive.** Persist via `chrome.storage`, IndexedDB, or CacheStorage. [Source.](https://developer.chrome.com/docs/extensions/develop/concepts/service-workers/lifecycle)
 
-- **(a) Register every event listener synchronously at top level.** Not inside `addEventListener('install')` or an async callback — the SW respawns and needs listeners attached immediately. [Source.](https://developer.chrome.com/docs/extensions/develop/concepts/service-workers/lifecycle) *Validator: `sw-listener-top-level` (best-effort).*
+- **(a+b) Register every event listener synchronously at top level.** Not inside `addEventListener('install')` or an async callback — the SW respawns and needs listeners attached immediately. Canonical diagnostic: if the extension works with devtools open but breaks when you close them, this is the bug. Oliver Dunk's [migration guide](https://developer.chrome.com/docs/extensions/develop/migrate/to-service-workers#register-listeners) · [Source.](https://developer.chrome.com/docs/extensions/develop/concepts/service-workers/lifecycle) *Validator: `sw-listener-top-level` (best-effort).* [Extracted.](../sources/extracted/2026-04-16_google-group_sw-event-listeners-top-level.md)
+
+- **(b+c) Known unresolved bug — SW goes silent after auto-update.** [Chromium #40805401](https://issues.chromium.org/issues/40805401) (open since 2021, reassigned 2025, no fix as of Aug 2025). Affects ~0.01–1% of auto-update events per named extension; SW reports itself active but receives zero events. Symptom: silent extension failure, no console errors. **No programmatic workaround exists.** Ship a liveness check from a content script (ping SW on page load, timeout 2–3s, surface a non-blocking "reload extension" notification to the user on timeout). Affected shipping extensions: Superhuman, Paperpile, BrightHire. [Extracted.](../sources/extracted/2026-04-16_google-group_auto-update-sw-race-condition.md)
 
 - **(a) `chrome.alarms` minimum period is 30 seconds** (Chrome 120+). [Source.](https://developer.chrome.com/docs/extensions/develop/concepts/service-workers/lifecycle)
 
@@ -107,7 +119,7 @@ So "unwritten" is wrong in letter but right in spirit. Your first submission wit
 
 ## Content scripts
 
-- **(a) Use `world: "ISOLATED"` (the default).** `MAIN` shares execution with the host page — host can tamper, `chrome.*` APIs unavailable. [Source.](https://developer.chrome.com/docs/extensions/reference/manifest/content-scripts) *Validator: `content-script-main-world`.*
+- **(a+c) Use `world: "ISOLATED"` (the default) unless you specifically need page-context access.** `MAIN` runs inside the website's JS context: you can read page globals, override `window.fetch`/`XHR`, and see internal SPA state — at the cost of `chrome.*` APIs (communicate back via `window.postMessage`). The validator rule warns rather than rejects when a sibling ISOLATED content script is also registered (the standard pattern for fetch-interception extensions). Don't use MAIN if ISOLATED will do — the host can tamper, and reviewers scrutinize harder. [Source.](https://developer.chrome.com/docs/extensions/reference/manifest/content-scripts) *Validator: `content-script-main-world`.* [Extracted.](../sources/extracted/2026-04-17_bashvlas_main-content-script-james-bond.md)
 
 - **(a) `run_at: "document_idle"` is the default and preferred.** Use `document_start` only if injection order genuinely requires it. [Source.](https://developer.chrome.com/docs/extensions/develop/concepts/content-scripts)
 
@@ -175,6 +187,12 @@ So "unwritten" is wrong in letter but right in spirit. Your first submission wit
 
 - **(d) Subscription flows that open an external webpage and store a license key locally are the common review-safe pattern.** Not officially "preferred" — this is just what ExtensionPay, Paddle, etc. do, and none of it trips remote-code rejections because a license key is data, not logic.
 
+## Supply chain considerations
+
+- **(c) Ownership transfers are invisible to users.** When an extension is bought and the publisher account transfers, existing users aren't notified — browsers silently accept updates from the new owner. Multiple named cases of 2024 ownership transfers followed by privilege-escalation updates (Darktheme for google translate, Convert PDF to JPEG/PNG, Download Manager Integration Checklist). The proposed fix: [WECG issue #558](https://github.com/w3c/webextensions/issues/558). The user-facing defense: Frisbie's [Under New Management](https://github.com/classvsoftware/under-new-management) extension. Track the WECG issue — if the API ships, wire it in. [Extracted Frisbie.](../sources/extracted/2026-04-17_frisbie-substack_tracking-extension-ownership.md) · [Extracted Palant.](../sources/extracted/2026-04-16_palant_02-03-analysis-of-an-advanced-malicious-chrome-extension.md)
+
+- **(d) If this factory is ever transferred, publish an advisory.** Commit to a "last-version-from-original-owner" announcement at the repo root so forks and users can pin a known-good tag. Good-faith signal; costs nothing.
+
 ## Featured badge (semi-unwritten criteria)
 
 - **(a) Self-nominate via "My item → I want to nominate my extension."** Once per 6 months. Extension must be public, English-supporting, owned by you. [Source.](https://developer.chrome.com/docs/webstore/discovery)
@@ -182,6 +200,8 @@ So "unwritten" is wrong in letter but right in spirit. Your first submission wit
 - **(a) Official criteria: "adherence to Chrome Web Store's best practices guidelines, including providing an enjoyable and intuitive experience, using the latest platform APIs and respecting the privacy of end-users."** [Source.](https://blog.google/products-and-platforms/products/chrome/find-great-extensions-new-chrome-web-store-badges/)
 
 - **(c) Community-reported unwritten criteria:** baseline good ratings, non-trivial install count, responsive issue tracker, polished screenshots, privacy policy actually linked. Pay-to-feature is not a thing. [Stefan VD](https://www.stefanvd.net/blog/2024/04/17/how-to-get-a-chrome-extension-featured/) · [Extension Ranker](https://extensionranker.com/growth-faq/how-to-get-featured-in-chrome-web-store).
+
+- **(c) Calibration: the Featured badge is automated, not a quality audit.** Documented cases of malicious Featured extensions include Blaze/Safum/Snap VPN (identical clones of the removed-for-malware Nucleus VPN, all currently Featured) and multiple spam-cluster extensions. The actual review criteria appear to be: MV3 manifest, user count, complete listing page with images, privacy-policy checkbox ticked. Don't treat competitors' Featured status as evidence of quality. [Extracted.](../sources/extracted/2026-04-16_palant_01-13-chrome-web-store-is-a-mess.md)
 
 ## Miscellaneous folklore
 
@@ -192,6 +212,43 @@ So "unwritten" is wrong in letter but right in spirit. Your first submission wit
 - **(c) Run `web-ext lint` (Mozilla) even for Chrome.** It catches a broader class of manifest issues than Chrome's packager. [Source.](https://nearform.com/digital-community/extension-reviews/)
 
 - **(c) If you're pending review >3 weeks, email developer support** — it's stuck, not queued. [Source.](https://developer.chrome.com/docs/webstore/review-process)
+
+- **(b) Cross-device state for free via `chrome.storage.onChanged`.** Listeners on the `sync` storage area fire across all the user's Chrome-synced devices when data updates — undocumented in the obvious places but confirmed on-record by Oliver Dunk. Enables real-time cross-device sync without polling. Useful for per-user settings that should persist everywhere. [Extracted.](../sources/extracted/2026-04-16_google-group_sw-event-listeners-top-level.md)
+
+- **(c) The "Flag concern" button on CWS listings is useless for policy violations.** It feeds a black-box algorithm with no details field. The real policy-violation report URL is hidden at `support.google.com/chrome_webstore/contact/one_stop_support`. The DDPRP bug-bounty channel that once provided human contact was discontinued Aug 2024. Expect no visibility into enforcement after filing. [Extracted.](../sources/extracted/2026-04-16_palant_01-13-chrome-web-store-is-a-mess.md)
+
+- **(c) Use deferred publishing for launches.** Submit 7–14 days before go-live, schedule the publish, absorb review-time variance without launch-day pain. [developer.chrome.com/docs/webstore/publish/#deferred-publishing](https://developer.chrome.com/docs/webstore/publish/#deferred-publishing) · [Extracted.](../sources/extracted/2026-04-16_google-group_review-times-deferred-publishing.md)
+
+---
+
+## Rejection-code decoder (quick reference)
+
+When a rejection email arrives, the color-element code maps to a policy family. Table sourced from Coditude; check your email for the exact code, match here, then jump to the relevant section above for the detailed rule.
+
+| Code | Family | Common cause | Fix path |
+|---|---|---|---|
+| **Blue Argon** | MV3 code requirements | Remote-hosted code, `<script src>` CDN, `eval` | Bundle all logic locally; remove `eval`/`new Function`; see "Manifest V3 code requirements" |
+| **Blue Nickel/Potassium** | Browser defaults | NTP / search change without Overrides API | Use Chrome Overrides API; see "Spam & deceptive behavior" |
+| **Blue Zinc/Copper/Lithium/Magnesium** | Prohibited products | Paywall bypass, piracy, IP violations | Remove violating functionality |
+| **Purple Potassium** | Excessive permissions | Over-requested host_permissions, unused APIs | Scope to `activeTab` or narrow, remove unused; see "Permissions & host access" |
+| **Purple Lithium** | Privacy policy | Missing/inaccessible privacy policy URL | Publish accessible privacy policy, match dashboard disclosures |
+| **Purple Nickel** | Prominent Data Disclosure | Data collection not tied to a described feature | Add affirmative consent at runtime + dashboard disclosure |
+| **Purple Magnesium** | Browsing-history collection | Collection not tied to a user-facing feature | Remove collection or tie to user-visible feature |
+| **Purple Copper** | HTTPS only | User data in URL query strings/headers | Move data to body, HTTPS transport |
+| **Red Titanium** | Obfuscation | Base64-encoded logic, character encoding tricks | Submit "code as authored" |
+| **Red Nickel/Potassium/Silicon** | Deceptive/impersonation | Misleading title/description/screenshots | Match listing to actual functionality |
+| **Red Zinc** | Deceptive install | Misleading CTA, hidden metadata | Clear install flows |
+| **Red Magnesium/Copper/Lithium/Argon** | Single-purpose | Multiple features bundled, ads + NTP + coupons | Split into separate submissions |
+| **Yellow Zinc** | Listing metadata | Missing title, description, screenshots, icons | Complete all listing fields professionally |
+| **Yellow Argon** | Keyword stuffing | Repetition >5x; site/location lists in description | Rewrite natural copy |
+| **Yellow Lithium** | Redirect-only | Extension whose sole job is to launch another thing | Ship actual in-browser functionality |
+| **Yellow Nickel** | Spam/review manipulation | Duplicates across accounts, incentivized reviews | Remove duplicates; stop incentivizing |
+| **Yellow Potassium** | Minimum functionality | Manifest-only, pure link-outs | Ship discernible value |
+| **Yellow Magnesium** | Packaging/functionality | Missing files, broken build, wrong paths | Test packed `.zip` locally before resubmit |
+| **Grey Silicon** | Cryptomining | Embedded miners, hidden mining scripts | Remove (disallowed) |
+| **Grey Titanium** | Affiliate links | Undisclosed affiliate injection | Disclose; require user action per code |
+
+[Extracted Coditude.](../sources/extracted/2026-04-17_coditude_rejection-codes-overview.md)
 
 ---
 

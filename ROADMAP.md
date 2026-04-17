@@ -408,6 +408,58 @@ Session 6 (video) after 3 and 5 ship — retrofits delegation into both of those
 
 ---
 
+## Session 7 — `cws-ship` update mode
+
+**Kind:** Skill extension. Modifies `/skills/cws-ship/SKILL.md` (no new skill file) plus a small addition to `scripts/cws-api.ts`.
+
+**Goal:** Today `cws-ship` treats every submission as a first-time launch. The common case after launch is an *update* — same extension ID, new version, different review rules. CWS scrutinizes significant manifest / permission changes on updates ("change of functionality" → re-review). The skill should detect update mode, warn on risky deltas, and coach through the in-dashboard permission-justification note CWS asks for.
+
+**Prerequisites:** Sessions 1 (cws-api has `getPublishedVersion` / `getListing`) and 3 (cws-ship exists). Only runs meaningfully with CWS secrets configured — gracefully degrades on no-secrets (treats as first-time).
+
+**Deliverables:**
+
+1. `/scripts/cws-api.ts` — one new helper `getLivePermissions(secrets)` that returns the currently-live manifest's `permissions` + `host_permissions` + `optional_host_permissions` arrays (if CWS API exposes them, else returns `null` + skip). Same no-secrets / API-fail guard pattern as the existing helpers.
+
+2. `/skills/cws-ship/SKILL.md` — new Phase A.4 between rule-id routing and Phase B (version sync):
+   - Check if the extension has a live version on CWS (use existing `getPublishedVersion` from cws-api).
+   - If no live version OR no secrets: skip — treat as first-time (current behavior).
+   - If live version exists: enter update mode. Fetch live permissions via the new helper. Diff local vs. live:
+     - Permissions added → warn. List them. Explain these trigger re-review.
+     - Permissions removed → informational. Usually fine, but flag if it's a permission the listing description mentions (the user may need to update listing copy too).
+     - Broadened host patterns (e.g., `https://example.com/*` → `https://*/*`) → big warn. Treat as high-risk.
+     - `optional_host_permissions` additions → lower risk, but still flag.
+   - Coach the user: "CWS's Privacy tab has a 'Permissions justification' field. For any new permission above, write one sentence per permission explaining why — reviewers read these. Here's a draft you can paste: [generate]."
+
+3. Update cws-ship's rejection-recovery recipes — add "Update rejected for change of functionality" entry, pointing back to Phase A.4's output.
+
+4. `/docs/03-chrome-web-store-submission.md` — add a short "Updating an existing extension" section mirroring the Phase A.4 logic.
+
+5. `ARCHITECTURE.md` — mark Session 7 done in Planned extensions. Resolve the "Updates workflow vs. first submission" limitation in Known Limitations.
+
+**Acceptance:**
+
+```
+# Without CWS secrets (most contributors):
+npm run check:cws                                # still green
+npm run check:cws:ship                           # still 6 errors on fresh factory
+# cws-ship's Phase A.4 probes, no live version detected → skips, falls through to first-time flow
+
+# With CWS secrets + a real live extension ID:
+# cws-ship detects update mode and warns on added permissions
+```
+
+Unit-testable? Phase A.4's diff logic is — write a small test that exercises `diffPermissions(local, live)` against fixture data. Do this; it's cheap and the rule is subtle.
+
+**Out of scope:** Automated CWS dashboard edits (no stable API). Auto-generating the listing description diff (judgment-heavy — belongs to cws-content in a future session).
+
+**Risks:**
+- CWS API may not expose live permissions cleanly. Probe it before designing the diff — if the API only returns a subset, scope accordingly.
+- False positives on cosmetic diffs (ordering, Firefox-vs-Chrome permission name variance). Normalize both sides before comparing.
+
+**Estimate:** Half day.
+
+---
+
 ## When this roadmap is "done"
 
-All six sessions acceptance-criteria complete. ARCHITECTURE.md's "Planned extensions" table has every item marked done. A new contributor who clones this repo can type `/cws-init` and go from zero to a live extension — including screenshots AND a launch video — without ever being asked to memorize a CWS rule or remember which command to run. That's the success state the philosophy is pointing at.
+All six shipped sessions acceptance-criteria complete (done). Session 7 is follow-up — promotes a Known Limitation to a concrete next PR. After Session 7: a user on their 5th update, with real CWS secrets configured, gets coaching on change-of-functionality re-review before they hit it. A new contributor who clones this repo can type `/cws-init` and go from zero to a live extension — including screenshots AND a launch video — without ever being asked to memorize a CWS rule or remember which command to run. That's the success state the philosophy is pointing at.
