@@ -1,5 +1,5 @@
 {
-  "name": "chrome-extension-factory",
+  "name": "create-chrome-extension",
   "description": "Ship Chrome extensions fast. WXT + React + Tailwind + TypeScript factory template.",
   "private": true,
   "version": "0.1.0",

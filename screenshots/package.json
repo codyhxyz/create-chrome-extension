@@ -1,5 +1,5 @@
 {
-  "name": "chrome-extension-factory-screenshots",
+  "name": "create-chrome-extension-screenshots",
   "description": "Declarative Chrome Web Store screenshot generator. Renders 1280x800 PNGs from config entries inside a desktop browser frame.",
   "private": true,
   "version": "0.1.0",
