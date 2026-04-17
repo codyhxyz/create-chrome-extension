@@ -1,9 +1,12 @@
 {
-  "name": "create-chrome-extension",
+  "name": "cce-factory",
   "description": "Ship Chrome extensions fast. WXT + React + Tailwind + TypeScript factory template.",
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "wxt",
     "dev:firefox": "wxt -b firefox",
