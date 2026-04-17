@@ -21,6 +21,9 @@ writes:
   - ".cce-init-done"                                   # marker file dropped at Phase H
   - ".gitignore"                                       # add the marker to gitignore (Phase H)
   - "entrypoints/"                                     # delete unused entrypoints during profile selection (Phase C)
+  - "entrypoints/*/App.tsx"                            # bespoke UI skeletons in Phase C2
+  - "entrypoints/content.ts"                           # bespoke DOM hook in Phase C2
+  - "entrypoints/background.ts"                        # bespoke message/storage wiring in Phase C2
   - "wxt.config.ts"                                    # only to remove orphaned permissions flagged in Phase C
 ---
 
@@ -249,6 +252,30 @@ After entrypoints are deleted, check `wxt.config.ts` for orphaned permissions:
 Edit `wxt.config.ts` to remove the orphaned permissions. Show the diff to the user before writing. The structural validator rule `unused-permission` will catch anything you miss, so a second pass is cheap.
 
 **Important:** after profile-strip, re-run `npm run check:cws`. It must stay green. If it doesn't (e.g., `unused-permission` fires), fix whatever it flags before moving on. This is the only place in the init flow where `check:cws` might break, and fixing it here is the user's investment in a clean factory.
+
+---
+
+## Phase C2 — Bespoke first-run code
+
+The kept entrypoints still contain factory templates (generic hello-world popups, placeholder content-script DOM hooks). Now tailor them to the user's pitch so the first `npm run dev` shows something resembling their idea, not a stock demo.
+
+**Scope:** only the entrypoint files that were kept. Do NOT touch `utils/`, `scripts/`, `wxt.config.ts` (already handled in Phase C), or any test file.
+
+**What "bespoke" means, per kept entrypoint:**
+
+- `entrypoints/content.ts` — replace the demo DOM-manipulation with a skeleton that matches the pitch. If the user said "highlight headlines on news sites," write a `queryAllDeep('h1, h2, h3')` loop with a `background: yellow` application. If they said "block tracker scripts," write a `MutationObserver` that looks for `<script src="...">` and removes matches. Do not leave `console.log('hello')` placeholders.
+- `entrypoints/popup/App.tsx` — replace the demo counter with the minimal UI implied by the pitch. "Save the tab to a list" → a button + a list component reading from `chrome.storage.local`. "Translate selected text" → a textarea + a button + a result div. Keep it short (~50 LOC), functional, and compile-clean.
+- `entrypoints/sidepanel/App.tsx` — same as popup, but laid out for a taller persistent panel.
+- `entrypoints/background.ts` — if the pitch implies message-passing or storage, wire the minimal handler. Keep the factory's typed-messaging pattern (`@webext-core/messaging`).
+- `entrypoints/options/App.tsx` — leave as a minimal settings stub unless the pitch explicitly calls for settings (e.g., "let users configure which sites to run on").
+
+**Do not** fabricate features the user didn't ask for. Do not add auth, analytics, or third-party integrations unless they came up in the interview.
+
+**After writing bespoke code, run `npm run check:cws`.** It must stay green. If it goes red, most likely you imported a browser global incorrectly or referenced a deleted util — fix before moving on.
+
+**If the pitch is too vague to generate real code** (e.g., "I'll figure it out later"): skip this phase. Leave the factory templates in place. Tell the user:
+
+> Leaving the factory templates in `entrypoints/` — you can flesh them out once you know what you're building. Moving on to listing content.
 
 ---
 
