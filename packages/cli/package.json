@@ -1,0 +1,19 @@
+{
+  "name": "create-chrome-extension",
+  "version": "0.1.0",
+  "description": "Scaffold a Chrome extension factory project in one command.",
+  "type": "module",
+  "bin": {
+    "create-chrome-extension": "./bin/cli.mjs"
+  },
+  "files": [
+    "bin"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node __tests__/cli.test.mjs"
+  },
+  "license": "MIT"
+}
