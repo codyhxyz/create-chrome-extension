@@ -73,7 +73,7 @@ So "unwritten" is wrong in letter but right in spirit. Your first submission wit
   - `activeTab` already grants temporary access after a user gesture without a warning.
   - [Source.](https://developer.chrome.com/docs/webstore/troubleshooting)
 
-- **(a) Sensitive permissions get extra verification time:** `tabs`, `downloads`, `cookies`, `webRequest`. [Source.](https://developer.chrome.com/docs/webstore/review-process) *Validator: `sensitive-permission-declared`.*
+- **(a) Sensitive permissions get extra verification time:** `tabs`, `downloads`, `cookies`, `webRequest`. [Source.](https://developer.chrome.com/docs/webstore/review-process) *Validator: `sensitive-permission-declared`.* [Purple Potassium audit remedies.](../sources/extracted/2026-04-17_coditude_purple-potassium-permissions.md)
 
 - **(a) Every declared permission must be justified** in the dashboard's "Permission justification" field. [Source.](https://developer.chrome.com/docs/webstore/cws-dashboard-privacy)
 
@@ -91,7 +91,7 @@ So "unwritten" is wrong in letter but right in spirit. Your first submission wit
 
 ## Manifest V3 code requirements
 
-- **(a) No remotely hosted code. Ever.** Rejection code: **Blue Argon.** Violations: `<script src="https://...">`, `eval()` of a fetched string, dynamic `import()` of a remote URL, any interpreter executing remote commands. Remote *data* is fine only if it contains no logic. [Migration guide](https://developer.chrome.com/docs/extensions/develop/migrate/remote-hosted-code) · [MV3 policy](https://developer.chrome.com/docs/webstore/program-policies/mv3-requirements). *Validator: `remote-code-patterns`.*
+- **(a) No remotely hosted code. Ever.** Rejection code: **Blue Argon.** Violations: `<script src="https://...">`, `eval()` of a fetched string, dynamic `import()` of a remote URL, any interpreter executing remote commands. Remote *data* is fine only if it contains no logic. [Migration guide](https://developer.chrome.com/docs/extensions/develop/migrate/remote-hosted-code) · [MV3 policy](https://developer.chrome.com/docs/webstore/program-policies/mv3-requirements). *Validator: `remote-code-patterns`.* [Deeper Blue Argon cases.](../sources/extracted/2026-04-17_coditude_blue-argon-mv3.md)
 
 - **(a+c) Remote *data* vs remote *code* — the legit/malware line.** Google [officially recommends](https://developer.chrome.com/docs/extensions/develop/migrate/improve-security#configuration-drive) fetching configuration (site allow-lists, feature flags, strings) from a server — it keeps the reviewable code surface stable. The test: could the fetched payload be passed to `eval`/`Function()` or rendered as HTML with inline event handlers? If yes, you've crossed into malware territory. The factory should ship remote config as typed JSON with schema validation, cached in `chrome.storage.local`, never string-templated into DOM. [Extracted bashvlas.](../sources/extracted/2026-04-17_bashvlas_update-without-review.md) · [Extracted palant (contrast).](../sources/extracted/2026-04-16_palant_01-20-malicious-extensions-circumvent-googles-remote-code-ba.md)
 
@@ -135,7 +135,7 @@ So "unwritten" is wrong in letter but right in spirit. Your first submission wit
 
 - **(a) As of Jan 2025 every submission must complete the "Data usage" tab** — data types collected + Limited Use certification. Both checkbox groups are required. [Source.](https://developer.chrome.com/docs/webstore/program-policies/user-data-faq)
 
-- **(a) Privacy policy URL is mandatory if you touch any user data.** Public, matches dashboard disclosures, covers collection/use/sharing. Rejection code: **Purple Lithium.** [Source.](https://developer.chrome.com/docs/webstore/cws-dashboard-privacy)
+- **(a) Privacy policy URL is mandatory if you touch any user data.** Public, matches dashboard disclosures, covers collection/use/sharing. Rejection code: **Purple Lithium.** [Source.](https://developer.chrome.com/docs/webstore/cws-dashboard-privacy) [Full Purple-family walkthrough.](../sources/extracted/2026-04-17_coditude_purple-family-privacy.md)
 
 - **(a) Limited Use policy forbids ads-personalization, selling data, credit-worthiness determination, and human access without explicit consent/anonymization.** [Source.](https://developer.chrome.com/docs/webstore/program-policies/limited-use)
 
@@ -149,7 +149,7 @@ So "unwritten" is wrong in letter but right in spirit. Your first submission wit
 
 - **(a) ≥1 screenshot required; 5 recommended. Target 1280×800 (downscaled to 640×400); fallback 640×400.** No blurry/pixelated uploads. [Images spec](https://developer.chrome.com/docs/webstore/images) · [Best listing](https://developer.chrome.com/docs/webstore/best-listing).
 
-- **(a) Missing/blank icon, title, screenshots, or description → Yellow Zinc rejection.** [Source.](https://developer.chrome.com/docs/webstore/troubleshooting) *Validator: `listing-fields-present`.*
+- **(a) Missing/blank icon, title, screenshots, or description → Yellow Zinc rejection.** [Source.](https://developer.chrome.com/docs/webstore/troubleshooting) *Validator: `listing-fields-present`.* [Yellow Zinc specifics.](../sources/extracted/2026-04-17_coditude_yellow-zinc-metadata.md)
 
 - **(a) Keyword stuffing (Yellow Argon):** "unnatural keyword repetition exceeding five times," long lists of sites/locations in the description. [Source.](https://developer.chrome.com/docs/webstore/troubleshooting)
 
