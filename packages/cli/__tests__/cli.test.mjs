@@ -4,6 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import assert from 'node:assert/strict';
 
+process.env.CCE_REPO_URL = process.env.CCE_REPO_URL || new URL('../../..', import.meta.url).pathname;
+
 const CLI = new URL('../bin/cli.mjs', import.meta.url).pathname;
 
 function run(args, cwd) {
