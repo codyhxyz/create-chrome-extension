@@ -1,8 +1,10 @@
 # Chrome Extension Factory
 
+**The build-and-publish layer for the era of bespoke software.**
+
 *Package: `create-chrome-extension` — scaffold a new extension with one command.*
 
-Ship Chrome extensions fast. [WXT](https://wxt.dev) + React 19 + Tailwind v4 + TypeScript.
+[WXT](https://wxt.dev) + React 19 + Tailwind v4 + TypeScript.
 
 > **First time here?** Run `npx create-chrome-extension my-thing` (or clone + `/cce-init`). The skill walks you through a pitch-driven interview and scaffolds tailored code — see [ARCHITECTURE.md](ARCHITECTURE.md) for the design philosophy.
 
