@@ -29,11 +29,25 @@
  * The `ship-ready-screenshots` validator rule no-ops when the folder is gone.
  */
 
+/**
+ * Built extension surfaces the factory can auto-render via iframe (rung 1
+ * of the screenshot fallback ladder — see docs/07-fallback-ladders.md).
+ *
+ * The convention is one-to-one with WXT output: surface `popup` looks for
+ * `.output/chrome-mv3/popup.html`, `newtab` for `newtab.html`, etc. Add a
+ * value here when WXT starts emitting a new surface kind.
+ *
+ * `content-in-page` is the only non-built surface — it has no HTML file
+ * because it's injected into third-party pages. It always falls to rung 3
+ * (concept card) unless the user drops a hand-captured PNG at the output
+ * path. The validator surfaces that explicitly.
+ */
 export type ScreenshotSurface =
   | 'popup'
   | 'sidepanel'
   | 'options'
   | 'welcome'
+  | 'newtab'
   | 'content-in-page';
 
 export type ScreenshotTheme = 'light' | 'dark';

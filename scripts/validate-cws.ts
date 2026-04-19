@@ -651,33 +651,59 @@ async function listingDrift(ctx: Context): Promise<Finding[]> {
 }
 
 // Ship-only: the `screenshots/` subproject is the declarative CWS screenshot
-// generator (see `screenshots/config.ts`). Two things must be true before
-// submission:
-//   1. `screenshots/config.ts` no longer contains factory-default placeholders.
-//   2. `.output/screenshots/` exists and contains at least one `.png`.
+// generator (see `screenshots/config.ts`). Each shot runs through a fallback
+// ladder (docs/07-fallback-ladders.md); the capture script records which rung
+// each shot landed on in `.factory/ladder-status.json`. This rule reads that
+// file and emits one finding per non-ship-acceptable shot, plus the legacy
+// presence/placeholder checks as ordered prerequisites.
+//
 // If the user deleted `screenshots/` entirely (chose to ship without it), the
 // rule no-ops — returning [] — so the factory invariant holds for that profile.
 const SCREENSHOTS_CONFIG_PATH = join(ROOT, 'screenshots', 'config.ts');
 const SCREENSHOTS_OUTPUT_DIR = join(ROOT, '.output', 'screenshots');
+const LADDER_STATUS_PATH = join(ROOT, '.factory', 'ladder-status.json');
 const SCREENSHOT_PLACEHOLDERS = [
   'Your killer feature here',
   'your-target-site.com',
   'Replace this copy before shipping',
 ] as const;
 
+interface LadderEntry {
+  artifactId: string;
+  landedRung: string;
+  shipAcceptable: boolean;
+  reason: string | null;
+}
+
+interface LadderStatus {
+  schemaVersion: number;
+  generatedAt: string;
+  screenshots?: LadderEntry[];
+}
+
+function readLadderStatus(): LadderStatus | null {
+  if (!existsSync(LADDER_STATUS_PATH)) return null;
+  try {
+    return JSON.parse(readFileSync(LADDER_STATUS_PATH, 'utf8')) as LadderStatus;
+  } catch {
+    return null;
+  }
+}
+
 function shipReadyScreenshots(_ctx: Context): Finding[] {
-  // Subproject removed entirely → no-op. This is the "I don't need this
-  // pipeline" escape hatch, matching how welcomeConfigReadyForSubmission
-  // handles a deleted welcome entrypoint.
+  // Subproject removed entirely → no-op. The "I don't need this pipeline"
+  // escape hatch, matching welcomeConfigReadyForSubmission.
   if (!existsSync(SCREENSHOTS_CONFIG_PATH)) return [];
 
-  // The rule surfaces ONE finding at a time so the skill has a single thing
-  // to fix per validator run. Ordering is intentional:
-  //   (a) If PNGs are missing, say so first — the user has to run the
-  //       generator at least once regardless of config state.
-  //   (b) Once PNGs exist, if the config still contains placeholders, those
-  //       PNGs are still factory-template output and need regeneration with
-  //       real copy.
+  // Ordering is intentional:
+  //   (1) If PNGs are missing, say so first — nothing else matters.
+  //   (2) If config still has placeholders, those PNGs are factory-template
+  //       output regardless of which rung they landed on.
+  //   (3) If ladder status is missing but PNGs exist, the screenshots are
+  //       stale (predate the ladder system or were produced by hand). Force
+  //       re-run so we know what rung each landed on.
+  //   (4) If any shot landed below ship-acceptable, emit one finding per
+  //       stub so the user sees all gaps at once.
   const hasPng =
     existsSync(SCREENSHOTS_OUTPUT_DIR) &&
     readdirSync(SCREENSHOTS_OUTPUT_DIR).some((f) =>
@@ -717,7 +743,37 @@ function shipReadyScreenshots(_ctx: Context): Finding[] {
     ];
   }
 
-  return [];
+  const status = readLadderStatus();
+  if (!status || !status.screenshots || status.screenshots.length === 0) {
+    return [
+      {
+        rule: 'ship-ready-screenshots',
+        severity: 'error',
+        message: `.output/screenshots/ has PNGs but .factory/ladder-status.json is missing or empty`,
+        why: 'Screenshots predate the fallback-ladder system or were produced by hand. The validator needs to know which rung each shot landed on (real-build vs stub) before it can clear ship mode.',
+        source: 'docs/07-fallback-ladders.md',
+        fix: 'Re-run `npm run screenshots` from the repo root. The capture script will record landings to `.factory/ladder-status.json`.',
+      },
+    ];
+  }
+
+  const stubs = status.screenshots.filter((e) => !e.shipAcceptable);
+  if (stubs.length === 0) return [];
+
+  return stubs.map<Finding>((entry) => ({
+    rule: 'ship-ready-screenshots',
+    severity: 'error',
+    message: `screenshot "${entry.artifactId}" landed on stub rung "${entry.landedRung}"`,
+    why:
+      entry.reason ??
+      'Stub rungs render placeholder content with a STUB watermark and are never ship-acceptable.',
+    source: 'docs/07-fallback-ladders.md',
+    fix:
+      entry.landedRung === 'concept-card'
+        ? `Get this shot to rung 1 (real-build): run \`npm run build\` so \`.output/chrome-mv3/<surface>.html\` exists, then re-run \`npm run screenshots\`. For surface 'content-in-page', hand-capture a real PNG and drop it at \`.output/screenshots/${entry.artifactId}.png\` (the validator treats any user-supplied PNG with a matching ladder-status entry as ship-acceptable).`
+        : `Re-run \`npm run screenshots\` after addressing: ${entry.reason ?? 'unknown'}.`,
+    locations: [`.output/screenshots/${entry.artifactId}.png`],
+  }));
 }
 
 // Ship-only: the `video/` subproject is the declarative CWS launch-video

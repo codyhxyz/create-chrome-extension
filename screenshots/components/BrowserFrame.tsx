@@ -209,6 +209,7 @@ function NavButton({
 
 function deriveTabTitle(surface: ScreenshotSurface, url: string): string {
   if (surface === 'options' || surface === 'welcome') return 'Extension';
+  if (surface === 'newtab') return 'New Tab';
   try {
     const host = new URL(url).host || 'tab';
     return host;
