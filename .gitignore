@@ -45,6 +45,7 @@ screenshots/tsconfig.tsbuildinfo
 *.sln
 *.sw?
 .claude/worktrees/
+.worktrees/
 .output/videos/
 
 # Factory-internal bookkeeping (ladder status, etc.) — see docs/07-fallback-ladders.md
