@@ -30,6 +30,8 @@ proxy/node_modules
 proxy/.wrangler
 proxy/vercel/node_modules
 proxy/vercel/.vercel
+proxy-authed/node_modules
+proxy-authed/.wrangler
 
 # Secrets
 .secrets.local.json

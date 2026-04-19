@@ -42,7 +42,11 @@ const data = await resp.json();
 
 `proxyFetch` generates a UUID v4 on first call into `chrome.storage.local['cce-install-id']` and reuses it on every subsequent call. The proxy URL comes from `VITE_PROXY_URL` in your `.env.local`.
 
-**Proxy side** — deploy once. See `proxy/README.md` for the Cloudflare Worker steps (~10 minutes: `wrangler login`, create a KV namespace, `wrangler secret put` each upstream's base URL + key, `wrangler deploy`). Or `proxy/vercel/README.md` for the Vercel equivalent.
+**Proxy side** — one command. `npm run setup:proxy` walks `wrangler login` / KV create / upstream secrets / deploy / writing `VITE_PROXY_URL` to `.env.local`. Takes about two minutes if you already have a Cloudflare account. See `proxy/README.md` for the manual-deploy steps or the Vercel equivalent (`proxy/vercel/README.md`).
+
+### Authed variant — when your extension has sign-in
+
+If your extension already requires a login (sync, history, paid tier, B2B), use `proxy-authed/` instead of `proxy/`. Same `POST /v1/forward` contract, but it verifies a JWT from your auth provider (Clerk / Auth0 / Supabase / Google) and rate-limits per real user id. Stronger guarantees than per-UUID because `sub` claims aren't forgeable, and you get a `BANNED_SUBS` KV for the rare case you need to cut off an abusive account. Deploy one proxy per extension — pick `proxy/` or `proxy-authed/`, not both. See `proxy-authed/README.md`.
 
 ### Spend cap (non-negotiable)
 
