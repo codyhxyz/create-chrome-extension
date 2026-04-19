@@ -393,7 +393,7 @@ Delegate to the `setup-cws-credentials` skill. That skill owns:
 - Persistence to `.secrets.local.json` (gitignored)
 - End-to-end verification via `npm run check:cws:ship --json`
 
-Invoke it and wait for it to report back. Do NOT re-explain the Google Cloud Console flow here — `setup-cws-credentials` and `docs/07-google-cloud-setup.md` are the source of truth. If the user defers any sub-step (e.g. doesn't have a CWS listing yet), accept that and move on; the skill is safe to re-run to fill in missing pieces.
+Invoke it and wait for it to report back. Do NOT re-explain the Google Cloud Console flow here — `setup-cws-credentials` and `docs/08-google-cloud-setup.md` are the source of truth. If the user defers any sub-step (e.g. doesn't have a CWS listing yet), accept that and move on; the skill is safe to re-run to fill in missing pieces.
 
 ---
 

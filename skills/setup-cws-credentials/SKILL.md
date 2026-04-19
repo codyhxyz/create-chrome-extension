@@ -178,7 +178,7 @@ Parse the JSON. Expect `listing-drift` (rule id) to be evaluated now — no more
 
 On success, say:
 
-> Credentials locked in. `npm run ship` will now publish directly to the Chrome Web Store. To use these in CI (GitHub Actions), add the 4 `CWS_*` keys as repo secrets — `loadSecrets()` falls back to env vars when `.secrets.local.json` is absent. See `docs/07-google-cloud-setup.md` for details.
+> Credentials locked in. `npm run ship` will now publish directly to the Chrome Web Store. To use these in CI (GitHub Actions), add the 4 `CWS_*` keys as repo secrets — `loadSecrets()` falls back to env vars when `.secrets.local.json` is absent. See `docs/08-google-cloud-setup.md` for details.
 
 ---
 
@@ -198,4 +198,4 @@ Before starting Phase A, read `.secrets.local.json` (if present) and note which 
 - You don't try to create the OAuth Desktop client via any Google API. There isn't one; stopping to search is wasted effort.
 - You don't modify the user's shell profile. Everyone else (`.github/workflows/*`, CI runners) uses env vars; local dev uses `.secrets.local.json`. Both are supported by `loadSecrets()` in `scripts/cws-api.ts`.
 - You don't submit a zip. `cws-ship` / `publish-cws.ts` do that.
-- You don't duplicate the reference in `docs/07-google-cloud-setup.md`. If the user asks "why can't step 4 be automated?" — point at that doc.
+- You don't duplicate the reference in `docs/08-google-cloud-setup.md`. If the user asks "why can't step 4 be automated?" — point at that doc.

@@ -9,7 +9,7 @@
  *      silently for personal Google accounts)
  *
  * The one step that is NOT automated — creating an OAuth 2.0 Desktop
- * client ID — has no public Google API. See `docs/07-google-cloud-setup.md`
+ * client ID — has no public Google API. See `docs/08-google-cloud-setup.md`
  * and the `setup-cws-credentials` skill for the handholding flow that
  * covers that part.
  *
