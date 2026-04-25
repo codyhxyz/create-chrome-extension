@@ -60,10 +60,14 @@ The user never has to know "remember to run the validator." The ship path runs i
                   │  Plugin: chrome-extension-factory      │
                   │                                         │
                   │  Skills (conversational entry points):  │
-                  │   • cws-init      scaffold & customize  │
+                  │   • cce-init      scaffold & customize  │
+                  │   • cce-import    vanilla MV3 → WXT     │
+                  │   • cce-rename    rebrand in place      │
                   │   • cws-content   draft copy/justifications│
                   │   • cws-screens   generate screenshots  │
+                  │   • cws-video     30-sec promo video    │
                   │   • cws-ship      orchestrate submit    │
+                  │   • setup-cws-credentials  GCP + OAuth  │
                   └─────────────────────┬───────────────────┘
                                         │
                                         │ skills invoke scripts
@@ -78,6 +82,10 @@ The user never has to know "remember to run the validator." The ship path runs i
                   │     (CWS API submit + poll)             │
                   │   • scripts/version-sync.ts             │
                   │     (local manifest ↔ CWS dashboard)    │
+                  │   • scripts/import-vanilla.ts           │
+                  │     (vanilla MV3 → WXT factory layout)  │
+                  │   • scripts/rename.ts                   │
+                  │     (rebrand wxt.config + pkg + og)     │
                   │   • entrypoints/welcome/                │
                   │     (runtime permission pattern)        │
                   │   • CLAUDE.md, ARCHITECTURE.md, docs/   │

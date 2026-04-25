@@ -8,7 +8,7 @@
   <a href="https://claude.com/product/claude-code"><img src="https://img.shields.io/badge/built_for-Claude%20Code-d97706" alt="Built for Claude Code"></a>
 </p>
 
-[WXT](https://wxt.dev) + React 19 + Tailwind v4 + TypeScript. Six skills, one validator, one ship gate.
+[WXT](https://wxt.dev) + React 19 + Tailwind v4 + TypeScript. Eight skills, one validator, one ship gate.
 
 <p align="center">
   <img src="assets/og.png" alt="create-chrome-extension" width="760">
@@ -100,7 +100,11 @@ Or install straight from this repo's marketplace:
 /plugin install create-chrome-extension@create-chrome-extension
 ```
 
-The six skills (`cce-init`, `cws-content`, `cws-screens`, `cws-ship`, `cws-video`, `setup-cws-credentials`) appear under the `/create-chrome-extension:` namespace and operate on the factory repo you opened in Claude Code.
+The eight skills (`cce-init`, `cce-import`, `cce-rename`, `cws-content`, `cws-screens`, `cws-ship`, `cws-video`, `setup-cws-credentials`) appear under the `/create-chrome-extension:` namespace and operate on the factory repo you opened in Claude Code.
+
+- `cce-init` — fresh-clone onboarding (profile strip, OAuth, structural green).
+- `cce-import` — convert an existing vanilla MV3 extension into the WXT factory layout.
+- `cce-rename` — rebrand an existing factory project (display name, slug, description, folder).
 
 **Skipping the plugin?** The factory still ships as a working codebase — `npm run dev`, `npm run build`, `npm run check:cws:ship`, `npm run ship` all work without the plugin. The plugin just automates the conversational pieces (interviews, validator-output → fix recipes).
 
@@ -206,6 +210,8 @@ Profiles: content-script-only, popup-based, side-panel app, full hybrid. See [do
 | `npm run version-sync` | Compare local version to live CWS version (no-ops without CWS secrets) |
 | `npm run ship` | End-to-end publish: `check:cws:ship` → `version-sync` → `wxt zip` → upload & poll |
 | `npm run screenshots` | Render 1280×800 CWS screenshots from `screenshots/config.ts` |
+| `npm run import -- <vanilla-dir>` | Convert an existing vanilla MV3 extension into this factory's WXT layout (driven by `cce-import` skill). `--dry-run` to preview. |
+| `npm run rename -- "<New Name>"` | Rebrand the factory in place — updates `wxt.config.ts`, `package.json`, `og.config.mjs`, entrypoint configs (driven by `cce-rename` skill). |
 | `npm run setup:cws` | One-time: provision a GCP project + enable the Chrome Web Store API (driven by `setup-cws-credentials` skill) |
 | `npm run setup:privacy` | Generate + host a privacy policy on GitHub Pages from your manifest's permissions; wires the URL into the welcome config. `--self-host=<url>` to skip gh-pages |
 | `npm run setup:proxy` | Deploy the `proxy/` Cloudflare Worker + write `VITE_PROXY_URL` into `.env.local` |

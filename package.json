@@ -22,6 +22,8 @@
     "test:cli": "node packages/cli/__tests__/cli.test.mjs",
     "test:validator": "wxt build && tsx scripts/__tests__/validator-snapshot.ts",
     "version-sync": "tsx scripts/version-sync.ts",
+    "rename": "tsx scripts/rename.ts",
+    "import": "tsx scripts/import-vanilla.ts",
     "setup:cws": "tsx scripts/bootstrap-gcp.ts",
     "setup:privacy": "wxt build && tsx scripts/setup-privacy-policy.ts",
     "setup:proxy": "tsx scripts/setup-proxy.ts",

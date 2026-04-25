@@ -56,7 +56,16 @@ Before anything else, figure out whether the current working directory IS a fact
 
 **If both present:** you're in a factory. Proceed to Phase A.
 
-**If either is missing:** the user invoked `/cce-init` outside a factory. Offer to clone:
+**If `manifest.json` is present at the repo root but `wxt.config.ts` is NOT:** the user ran `/cce-init` from inside an existing vanilla MV3 extension. This is a different flow. Offer:
+
+> This looks like an existing vanilla MV3 extension, not a fresh factory clone. You probably want `/cce-import` — it converts a vanilla extension into the factory layout in one pass (auto-detects your profile, moves files into `entrypoints/`, wraps `background.js` in `defineBackground`, and runs `check:cws` at the end).
+>
+> 1. Delegate to `/cce-import` now.
+> 2. Cancel — I'll exit.
+
+On choice 1: hand off to `/cce-import` with the current working directory as the source argument.
+
+**If `wxt.config.ts` AND `manifest.json` are both missing:** the user invoked `/cce-init` outside a factory. Offer to clone:
 
 > This directory isn't a Chrome Extension Factory. Want me to clone one?
 >
