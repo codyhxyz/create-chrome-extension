@@ -58,3 +58,8 @@ proxy-authed/.wrangler
 
 # Factory-internal bookkeeping (ladder status, etc.) — see docs/07-fallback-ladders.md
 .factory/
+
+# Ota local runtime artifacts
+.ota/state/
+.ota/receipts/
+.ota/proof/

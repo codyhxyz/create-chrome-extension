@@ -24,9 +24,9 @@
 
 - A working WXT extension matching your profile — content-script-only, popup, side panel, or full hybrid
 - Listing copy, 5 screenshots, and a 30-second promo that pass the Chrome Web Store's content rules — encoded as validators in `scripts/validate-cws.ts`, not as vibes
-- An auto-generated privacy policy hosted on GitHub Pages (`npm run setup:privacy`) and wired into the welcome page
+- An auto-generated privacy policy hosted on GitHub Pages (`ota run setup:privacy`) and wired into the welcome page
 - A deployable credential proxy (`proxy/`, with Cloudflare Workers and Vercel scaffolds; `proxy-authed/` for extensions with user sign-in) so your third-party API keys never land in the shipped bundle — the `no-bundled-credentials` validator rule is the forcing function
-- OAuth credentials wired so `npm run ship` does the build → version-sync → upload → poll for you
+- OAuth credentials wired so `ota run ship:publish` does the build → version-sync → upload → poll for you
 - A `check:cws:ship` gate that refuses to produce a zip until the listing is submission-ready
 - **Two-layer validation** — generic repo-health (Layer 1) + CWS-specific rules (Layer 2), so you don't ship an extension that passes CWS but has no tests and no lint
 
@@ -34,7 +34,7 @@
 
 The factory validates on two orthogonal axes:
 
-- **Layer 1 — generic repo health.** `scripts/readiness.sh` (ported from parcadei's ContinuousClaudeV4.7, MIT) checks ~20 rules across 6 categories: lint/formatter config, type checking, pre-commit hooks, lockfile, tests, coverage, README, CLAUDE.md/AGENTS.md, .env.example, .gitignore, CODEOWNERS, issue/PR templates. Runs as **Phase 0** in `cws-ship` — advisory by default (prints score, offers autofix via `scripts/readiness-fix.sh`, proceeds regardless). Set `CCE_READINESS_REQUIRED=1` to make a low score (<70%) block submission. A corresponding opt-in validator rule `ship-ready-generic-health` (severity: warn) surfaces the score inside `npm run check:cws:ship --json` when the same env var is set.
+- **Layer 1 — generic repo health.** `scripts/readiness.sh` (ported from parcadei's ContinuousClaudeV4.7, MIT) checks ~20 rules across 6 categories: lint/formatter config, type checking, pre-commit hooks, lockfile, tests, coverage, README, CLAUDE.md/AGENTS.md, .env.example, .gitignore, CODEOWNERS, issue/PR templates. Runs as **Phase 0** in `cws-ship` — advisory by default (prints score, offers autofix via `scripts/readiness-fix.sh`, proceeds regardless). Set `CCE_READINESS_REQUIRED=1` to make a low score (<70%) block submission. A corresponding opt-in validator rule `ship-ready-generic-health` (severity: warn) surfaces the score inside `ota run check:cws:ship` when the same env var is set.
 - **Layer 2 — CWS-specific rules.** `scripts/validate-cws.ts` — ~24 rules covering CSP, host permissions, remote-code patterns, listing drift, privacy policy reachability, screenshot/video readiness, etc. Authoritative for submission gating.
 
 The two layers are independent. Layer 1 is off the shipping critical path unless you opt in.
@@ -45,7 +45,7 @@ The two layers are independent. Layer 1 is off the shipping critical path unless
 ```
 > /create-chrome-extension:cce-init
 ```
-Walks an interview about your concept → picks the matching profile (e.g. `side-panel-app`) → deletes the entrypoints you won't use → confirms `npm run check:cws` is green.
+Walks an interview about your concept → picks the matching profile (e.g. `side-panel-app`) → deletes the entrypoints you won't use → confirms `ota run check:cws` is green.
 
 **Fill the listing and clear the four content rules:**
 ```
@@ -57,13 +57,68 @@ Interviews you for name, short description, host origins, welcome copy → write
 ```
 > /create-chrome-extension:cws-screens
 ```
-Interviews for the five panel concepts → writes `screenshots/config.ts` → runs `npm run screenshots` to render 1280×800 PNGs from your live extension.
+Interviews for the five panel concepts → writes `screenshots/config.ts` → runs the screenshots script to render 1280×800 PNGs from your live extension.
 
 **Submit to the Web Store:**
 ```
 > /create-chrome-extension:cws-ship
 ```
-Gates on `npm run check:cws:ship` → version-syncs against the live listing → confirms with you → submits via the CWS API (or falls back to manual zip upload if you skipped OAuth).
+Gates on `ota run check:cws:ship` → version-syncs against the live listing → confirms with you → submits via the CWS API (or falls back to manual zip upload if you skipped OAuth).
+
+## Quick Start
+
+This repo includes a complete [Ota contract](https://ota.run/docs/install) in `ota.yaml` to standardize setup, checks, and workflows.
+Run these commands from the repo root.
+
+### What to run first
+
+```bash
+# For an existing clone
+ota run install
+ota validate
+ota doctor
+```
+
+### Scaffolding / First-time setup
+
+If you are creating the repo for the first time, run the scaffold/clone steps in [Install](#install), then run:
+
+```bash
+ota run install
+ota doctor
+```
+
+### Common development flow
+
+```bash
+ota run install:app
+ota run dev
+ota run build
+ota run check:cws
+```
+
+### Submit gate flow (two-phase ship)
+
+```bash
+ota run ship:prepare
+ota run ship:publish
+```
+
+`workflows.ship.prepare.task` first materializes `.secrets.local.json` from
+`.secrets.local.json.example` when missing, then `ship:prepare` handles
+validation, version sync, and zip packaging before publish.
+
+### List all Ota commands
+
+```bash
+ota tasks --use
+```
+
+### Notes
+
+- `dev` and `build` run in the `app` context (container).
+- `install`, `compile`, `check:*`, and `ship:*` run in `host` context (native).
+- `ci` is available via `ota up --workflow ci` or direct task execution with `ota run ci:check`.
 
 ## Install
 
@@ -76,6 +131,7 @@ Either use the CLI:
 ```bash
 npx create-chrome-extension my-extension
 cd my-extension
+ota run install
 ```
 
 Or clone directly:
@@ -83,7 +139,7 @@ Or clone directly:
 ```bash
 git clone https://github.com/codyhxyz/create-chrome-extension.git my-extension
 cd my-extension
-npm install
+ota run install
 ```
 
 ### 2. Install the Claude Code plugin (inside your new repo)
@@ -106,7 +162,7 @@ The eight skills (`cce-init`, `cce-import`, `cce-rename`, `cws-content`, `cws-sc
 - `cce-import` — convert an existing vanilla MV3 extension into the WXT factory layout.
 - `cce-rename` — rebrand an existing factory project (display name, slug, description, folder).
 
-**Skipping the plugin?** The factory still ships as a working codebase — `npm run dev`, `npm run build`, `npm run check:cws:ship`, `npm run ship` all work without the plugin. The plugin just automates the conversational pieces (interviews, validator-output → fix recipes).
+**Skipping the plugin?** The factory still ships as a working codebase — `ota run dev`, `ota run build`, `ota run check:cws:ship`, `ota run ship:publish` all work without the plugin. The plugin just automates the conversational pieces (interviews, validator-output → fix recipes).
 
 ## Usage
 
@@ -123,7 +179,7 @@ Each skill is independently invocable — re-run `cws-content` after a copy chan
 
 ## Why this exists
 
-The Chrome Web Store enforces ~18 content rules that aren't assembled in one place anywhere in Google's docs. The factory encodes them as validators (`npm run check:cws`, `npm run check:cws:ship`) so you can't accidentally ship a half-baked listing. The skills are the conversational layer over those validators — they interview you, write the right files, and re-run the checker.
+The Chrome Web Store enforces ~18 content rules that aren't assembled in one place anywhere in Google's docs. The factory encodes them as validators (`ota run check:cws`, `ota run check:cws:ship`) so you can't accidentally ship a half-baked listing. The skills are the conversational layer over those validators — they interview you, write the right files, and re-run the checker.
 
 **This plugin won't:** write your extension's actual feature code, design your UI, generate marketing screenshots that aren't grounded in your live extension, or submit to anywhere other than the Chrome Web Store.
 
@@ -179,13 +235,13 @@ Profiles: content-script-only, popup-based, side-panel app, full hybrid. See [do
         ▼
    2. STRIP          /create-chrome-extension:cce-init
         ▼
-   3. DEV            npm run dev    → opens Chrome, HMR
+   3. DEV            ota run dev    → opens Chrome, HMR
         ▼
-   4. BUILD          npm run build  → .output/chrome-mv3/
+   4. BUILD          ota run build  → .output/chrome-mv3/
         ▼
-   5. SCREENSHOTS    /create-chrome-extension:cws-screens → npm run screenshots
+   5. SCREENSHOTS    /create-chrome-extension:cws-screens → screenshots script
         ▼
-   6. ZIP            npm run zip    → gated on check:cws:ship
+   6. ZIP/PREPARE    ota run ship:prepare    → gated on check:cws:ship
         ▼
    7. SUBMIT         /create-chrome-extension:cws-ship
         ▼
@@ -231,6 +287,6 @@ All `setup:*` scripts share a `schemaVersion: 1` JSON envelope when run with `--
 - [Useful Patterns](docs/05-useful-patterns.md) — utilities, messaging, welcome page pattern
 - [Keepalive Publish](docs/06-keepalive-publish.md)
 - [Fallback Ladders](docs/07-fallback-ladders.md) — how the factory degrades gracefully (currently: screenshots) so it never asks the user when it can produce an honest output
-- [Google Cloud Setup](docs/08-google-cloud-setup.md) — GCP/CWS credential onboarding for opt-in features (`listing-drift`, `npm run ship`)
+- [Google Cloud Setup](docs/08-google-cloud-setup.md) — GCP/CWS credential onboarding for opt-in features (`listing-drift`, `ota run ship:publish`)
 - [Asks Log](docs/asks-log.md) — defect log of places the factory had to stop and ask
-- Templates: [Store Listing](docs/templates/store-listing.md) · [QA Checklist](docs/templates/qa-checklist.md) (privacy policy is auto-generated — `npm run setup:privacy`)
+- Templates: [Store Listing](docs/templates/store-listing.md) · [QA Checklist](docs/templates/qa-checklist.md) (privacy policy is auto-generated — `ota run setup:privacy`)
