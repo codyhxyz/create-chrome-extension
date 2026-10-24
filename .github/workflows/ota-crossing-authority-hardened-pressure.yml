@@ -1,0 +1,215 @@
+# <!--
+#                 █████
+#                ░░███
+#        ██████  ███████    ██████
+#       ███░░███░░░███░    ░░░░░███
+#      ░███ ░███  ░███      ███████
+#      ░███ ░███  ░███ ███ ███░░███
+#      ░░██████   ░░█████ ░░████████
+#       ░░░░░░     ░░░░░   ░░░░░░░░
+#
+#    Copyright (C) 2026 — 2026, Ota. All Rights Reserved.
+#
+#    Licensed under the Apache License, Version 2.0 (the "License");
+#    you may not use this file except in compliance with the License.
+#    You may obtain a copy of the License at
+#
+#        http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
+# -->
+
+name: Ota Crossing Authority Hardened Runner Pressure
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: Administrator-provisioned authority state to exercise.
+        required: true
+        type: choice
+        options:
+          - live
+          - expired
+          - revoked
+          - out-of-scope
+
+permissions:
+  contents: read
+
+jobs:
+  signed-grant-pressure:
+    name: ${{ inputs.scenario }} signed grant on hardened runner
+    # A runner administrator applies exactly one scenario label only after provisioning the fixed
+    # Ota binary, authority store, signed bundle, and sequence state. This workflow never creates
+    # or updates /etc/ota or /var/lib/ota and cannot turn the dispatch input into authority.
+    runs-on: [self-hosted, linux, "ota-crossing-${{ inputs.scenario }}"]
+    timeout-minutes: 15
+    env:
+      EXPECTED_OTA_COMMIT: e9d8d8d6d206c65311f48d61648c8467b90f0c03
+    steps:
+      - name: Verify pre-provisioned Ota build identity
+        run: |
+          set -euo pipefail
+          ota --version --json > "$RUNNER_TEMP/ota-version.json"
+          jq -e --arg commit "$EXPECTED_OTA_COMMIT" '
+            .ok == true and
+            .source_build == true and
+            .dirty == false and
+            .commit == $commit
+          ' "$RUNNER_TEMP/ota-version.json"
+
+      - name: Inspect the prebound authority hardening profile
+        run: |
+          set -euo pipefail
+          ota authority inspect --json > "$RUNNER_TEMP/hardened-runner.json"
+          jq -e '
+            .ok == true and
+            .kind == "authority_inspect" and
+            .profile.id == "prebound_file_hardening" and
+            .profile.version == 1 and
+            .profile.verdict == "matched_with_unknowns" and
+            .authority_source == "prebound_file" and
+            .authority_separation_posture == "current_process_filesystem_guarded" and
+            .platform.os == "linux" and
+            .platform.architecture == "x86_64" and
+            ([.observations[] | select(.required == true and .status != "passed")] | length) == 0 and
+            ([.observations[] | select(.id == "effective_user" and .status == "passed")] | length) == 1 and
+            ([.observations[] | select(.id == "docker_host" and .status == "passed")] | length) == 1 and
+            ([.observations[] | select(.id == "common_docker_socket" and .status == "passed")] | length) == 1 and
+            ([.observations[] | select(.id == "trust_store" and .status == "passed")] | length) == 1 and
+            ([.observations[] | select(.id == "authority_bindings" and .status == "passed")] | length) == 1 and
+            ([.observations[] | select(.id == "signed_bundles" and .status == "passed")] | length) == 1 and
+            ([.observations[] | select(.id == "sequence_states" and .status == "passed")] | length) == 1 and
+            ([.observations[] | select(.id == "passwordless_sudo" and .required == false and .status == "unknown")] | length) == 1
+          ' "$RUNNER_TEMP/hardened-runner.json"
+
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 0
+
+      - name: Reconcile checked-out pressure contract with the pre-provisioned build
+        run: |
+          set -euo pipefail
+          contract_commit="$(sed -nE 's/^[[:space:]]*rev:[[:space:]]*([^[:space:]#]+).*/\1/p' ota-crossing-pressure.yaml)"
+          test "$contract_commit" = "$EXPECTED_OTA_COMMIT"
+
+      - name: Reset only the pressure checkout state
+        run: git clean -ffdx
+
+      - name: Validate and discover the governed pressure lane
+        run: |
+          set -euo pipefail
+          ota validate --file ota-crossing-pressure.yaml --json
+          ota doctor --file ota-crossing-pressure.yaml --json
+          ota tasks --file ota-crossing-pressure.yaml --use --json
+          ota tasks --file ota-crossing-pressure.yaml --safe --use --json
+
+      - name: Derive the exact dry-run scope without consuming a crossing
+        if: inputs.scenario == 'live'
+        run: |
+          set -euo pipefail
+          ota run scaffold:sample --file ota-crossing-pressure.yaml --grant fixture-live --dry-run --json \
+            > "$RUNNER_TEMP/grant-dry-run.json"
+          jq -e '.ok == true and .execution_started == false and .crossing_grant_admission.decision == "admissible_not_consumed"' \
+            "$RUNNER_TEMP/grant-dry-run.json"
+          test ! -e .ota-pressure/scaffold-sample
+
+      - name: Prove live grant creates one transaction-bound scaffold receipt
+        if: inputs.scenario == 'live'
+        run: |
+          set -euo pipefail
+          test ! -e .ota-pressure/scaffold-sample
+          ota run scaffold:sample --file ota-crossing-pressure.yaml --grant fixture-live --receipt
+          test -e .ota-pressure/scaffold-sample
+          archive="./$(find .ota/receipts -type f -name 'repo-receipt-*.json' | sort | tail -n 1)"
+          test -n "$archive"
+          jq -e '
+            .receipt.status == "success" and
+            .receipt.crossing.id == .receipt.crossing.authority.transaction.transaction_id and
+            .receipt.crossing.authority.authority_id == "pressure-fixture-authority" and
+            .receipt.crossing.authority.grant_id == "fixture-live" and
+            .receipt.crossing.authority.authority_separation_posture == "current_process_filesystem_guarded" and
+            .receipt.crossing.authority.transaction.state == "completed" and
+            .receipt.crossing.authority.transaction.authentication_posture == "runner_local_content_addressed" and
+            .receipt.crossing.authority.transaction.receipt_status == "success"
+          ' "$archive"
+          ota receipt --history --file ota-crossing-pressure.yaml --json > "$RUNNER_TEMP/receipt-history.json"
+          jq -e --arg archive "$archive" '
+            .ok == true and
+            .summary.archive_count == 1 and
+            .summary.invalid_archive_count == 0 and
+            (.archives | length) == 1 and
+            (.invalid_archives | length) == 0 and
+            .archives[0].archive_path == $archive
+          ' "$RUNNER_TEMP/receipt-history.json"
+
+      - name: Prove invalid grant refuses before scaffold mutation
+        if: inputs.scenario != 'live'
+        env:
+          SCENARIO: ${{ inputs.scenario }}
+        run: |
+          set -euo pipefail
+          case "$SCENARIO" in
+            expired) expected_reason='crossing_grant_expired' ;;
+            revoked) expected_reason='crossing_grant_revoked' ;;
+            out-of-scope) expected_reason='crossing_grant_out_of_scope' ;;
+            *) echo "Unsupported scenario: $SCENARIO" >&2; exit 2 ;;
+          esac
+          checkout_manifest() {
+            {
+              find . -path './.git' -prune -o -printf '%y %m %s %p -> %l\n' | LC_ALL=C sort
+              find . -path './.git' -prune -o -type f -print0 | LC_ALL=C sort -z | xargs -0 -r sha256sum
+            }
+          }
+          checkout_manifest > "$RUNNER_TEMP/checkout-before.manifest"
+          test ! -e .ota-pressure/scaffold-sample
+          if ota run scaffold:sample --file ota-crossing-pressure.yaml --grant fixture-live --dry-run --json \
+            > "$RUNNER_TEMP/grant-dry-run.json" 2>&1; then
+            echo "Expected $SCENARIO dry-run grant refusal." >&2
+            exit 1
+          fi
+          jq -e --arg expected_reason "$expected_reason" \
+            '.ok == false and .execution_started == false and .crossing_grant_admission.reason_family == $expected_reason' \
+            "$RUNNER_TEMP/grant-dry-run.json"
+          checkout_manifest > "$RUNNER_TEMP/checkout-after-dry-run.manifest"
+          cmp -s "$RUNNER_TEMP/checkout-before.manifest" "$RUNNER_TEMP/checkout-after-dry-run.manifest"
+          if ota run scaffold:sample --file ota-crossing-pressure.yaml --grant fixture-live \
+            > "$RUNNER_TEMP/refusal.txt" 2>&1; then
+            echo "Expected $SCENARIO grant refusal." >&2
+            exit 1
+          fi
+          rg -F "$expected_reason" "$RUNNER_TEMP/refusal.txt"
+          checkout_manifest > "$RUNNER_TEMP/checkout-after-refusal.manifest"
+          cmp -s "$RUNNER_TEMP/checkout-before.manifest" "$RUNNER_TEMP/checkout-after-refusal.manifest"
+          test ! -e .ota-pressure/scaffold-sample
+          test ! -d .ota/receipts
+
+      - name: Preserve pressure evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ota-crossing-authority-${{ inputs.scenario }}
+          if-no-files-found: warn
+          path: |
+            *-run.json
+            .ota/receipts/**
+            ${{ runner.temp }}/grant-dry-run.json
+            ${{ runner.temp }}/refusal.txt
+            ${{ runner.temp }}/receipt-history.json
+            ${{ runner.temp }}/hardened-runner.json
+            ${{ runner.temp }}/ota-version.json
+            ${{ runner.temp }}/checkout-*.manifest
+
+      - name: Record pressure boundary
+        if: always()
+        run: |
+          cat <<'EOF' >> "$GITHUB_STEP_SUMMARY"
+          This workflow proves only the selected pre-provisioned authority state on a non-root runner.
+          It does not self-provision authority, prove the runner lacks all administrative capabilities,
+          or complete broker-backed one-use work-unit lifetime authority.
+          EOF

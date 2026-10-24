@@ -1,0 +1,823 @@
+version: 1
+metadata:
+  ota:
+    minimum_version: "1.6.23"
+project:
+  name: create-chrome-extension
+  description: WXT-powered Chrome extension factory with CWS-ready build, validation, and shipping flows
+  type: application
+
+execution:
+  default_context: host
+  contexts:
+    host:
+      backend: native
+    app:
+      backend: container
+      lifecycle: persistent
+      container:
+        image: node:20-bookworm
+    sandbox:container:
+      backend: container
+      lifecycle: ephemeral
+      container:
+        image: node:20-bookworm
+        platform: linux/amd64
+
+toolchains:
+  node:
+    version: ">=20"
+    package_managers:
+      npm: ">=10"
+
+checks:
+  - name: node-toolchain-ready
+    kind: precondition
+    severity: error
+    run: node --version && npm --version
+    timeout: 15000
+  - name: node-modules-installed
+    kind: file
+    severity: error
+    path: node_modules
+    expect: directory
+  - name: package-lock-present
+    kind: file
+    severity: error
+    path: package-lock.json
+    expect: file
+  - name: build-output-dir
+    kind: file
+    severity: warn
+    path: .output
+    expect: directory
+
+tasks:
+  sandbox:banner-report:
+    context: sandbox:container
+    description: Generate the repository's development banner as bounded OCI sandbox evidence
+    notes: |
+      This pressure-only lane runs the repository's existing banner generator and writes its
+      output into one declared carve-out after confirming that the same boundary refuses a write
+      to protected `ota.yaml`. It proves only selected-lane filesystem, network,
+      provider-application, and cleanup truth; it is not the extension build or contributor suite.
+    category: verify
+    command:
+      exe: bash
+      args:
+        - -lc
+        - >-
+          if printf forbidden > ota.yaml 2>/dev/null; then exit 9; fi;
+          node scripts/print-dev-banner.mjs > .ota-pressure/sandbox/dev-banner.txt
+    runtime_boundary:
+      filesystem:
+        repo_root_mode: read_only
+        writable_paths:
+          - .ota-pressure/sandbox
+        protected_paths:
+          - ota.yaml
+          - .github/workflows
+      network:
+        default: deny
+    effects:
+      writes:
+        - .ota-pressure/sandbox
+    safe_for_agent: true
+
+  scaffold:sample:
+    context: host
+    description: Materialize a fresh sample extension repo from the factory template
+    notes: |
+      Pressure/proof lane for factory scaffold ownership. This task clones the current
+      factory repo into a deterministic local sample path, strips inherited Git metadata,
+      and initializes a fresh child repo so Ota owns the same bootstrap shape previously
+      left in README and skill shell glue.
+    category: setup
+    action:
+      kind: ensure_git_template
+      path: .ota-pressure/scaffold-sample
+      source:
+        git: .
+        ref: 69a34fb0c8747b13878e2164487b2ed692be7488
+    effects:
+      writes:
+        - .ota-pressure
+    safe_for_agent: false
+
+  install:app:
+    context: app
+    description: Install Node dependencies in the app container context
+    notes: |
+      Runs `npm ci` inside the container execution context so subsequent container-bound tasks
+      can rely on a prepared, consistent dependency state.
+    category: setup
+    prepare:
+      kind: dependency_hydration
+      medium: package_dependencies
+      source:
+        kind: node_package_manager
+        cwd: .
+        manager: npm
+        mode: ci
+    requirements:
+      toolchains:
+        - node
+    effects:
+      writes:
+        - node_modules
+      network: true
+      network_kind: dependency_hydration
+    safe_for_agent: true
+
+  install:
+    context: host
+    description: Install Node dependencies for the extension workspace
+    notes: |
+      Uses a host-native bootstrap for workflows that remain in local shell mode (`test`, `package`,
+      `setup`, `publish` support tasks).
+    category: setup
+    prepare:
+      kind: dependency_hydration
+      medium: package_dependencies
+      source:
+        kind: node_package_manager
+        cwd: .
+        manager: npm
+        mode: ci
+    requirements:
+      toolchains:
+        - node
+    effects:
+      writes:
+        - node_modules
+      network: true
+      network_kind: dependency_hydration
+    safe_for_agent: true
+
+  compile:
+    context: host
+    description: Run TypeScript compile-only checks
+    notes: |
+      Use this before any build or publish step to catch typing breaks without mutating artifacts.
+    category: test
+    command:
+      exe: npm
+      args:
+        - run
+        - compile
+    requirements:
+      checks:
+        - node-toolchain-ready
+        - node-modules-installed
+    depends_on:
+      - install
+    safe_for_agent: true
+
+  dev:
+    context: app
+    description: Start the extension dev server with live reload
+    notes: |
+      This task is intentionally on the `app` container context for parity with local containerized
+      extension workflows. Keep `dev` host-bound tasks separate so environment assumptions are explicit.
+    category: dev
+    launch:
+      kind: command
+      exe: npm
+      args:
+        - run
+        - dev
+    requirements:
+      checks:
+        - node-toolchain-ready
+        - node-modules-installed
+    depends_on:
+      - install:app
+    safe_for_agent: false
+
+  dev:firefox:
+    context: app
+    description: Start Firefox dev server with live reload
+    notes: |
+      Runs in the `app` container context to keep the cross-browser dev flow aligned with other
+      containerized extension execution paths.
+    category: dev
+    launch:
+      kind: command
+      exe: npm
+      args:
+        - run
+        - dev:firefox
+    requirements:
+      checks:
+        - node-toolchain-ready
+        - node-modules-installed
+    depends_on:
+      - install:app
+    safe_for_agent: false
+
+  build:
+    context: app
+    description: Build the Chrome extension package artifact
+    notes: |
+      Use when you need runnable extension artifacts for local install or prepublish checks.
+      Build is intentionally container-bound (`app`) so generated artifacts follow the same execution
+      environment as containerized local development.
+    category: build
+    command:
+      exe: npm
+      args:
+        - run
+        - build
+    requirements:
+      checks:
+        - node-toolchain-ready
+        - node-modules-installed
+    depends_on:
+      - install:app
+    safe_for_agent: true
+
+  build:firefox:
+    context: app
+    description: Build the Firefox extension package artifact
+    notes: |
+      Use when preparing the Firefox listing/review path or parity verification before zip.
+      Runs in `app` to keep Firefox artifact builds consistent with containerized build defaults.
+    category: build
+    command:
+      exe: npm
+      args:
+        - run
+        - build:firefox
+    requirements:
+      checks:
+        - node-toolchain-ready
+        - node-modules-installed
+    depends_on:
+      - install:app
+    safe_for_agent: true
+
+  zip:
+    context: host
+    description: Build Chrome Web Store zip artifact
+    notes: |
+      Deterministic packaging step; run once build artifacts exist and checks have passed.
+    category: package
+    command:
+      exe: npm
+      args:
+        - run
+        - zip
+    requirements:
+      checks:
+        - node-toolchain-ready
+        - node-modules-installed
+    depends_on:
+      - install
+    safe_for_agent: false
+
+  zip:firefox:
+    context: host
+    description: Build Firefox zip artifact
+    notes: |
+      Firefox packaging artifact for store submission after Firefox build completion.
+    category: package
+    command:
+      exe: npm
+      args:
+        - run
+        - zip:firefox
+    requirements:
+      checks:
+        - node-toolchain-ready
+        - node-modules-installed
+    depends_on:
+      - install
+    safe_for_agent: false
+
+  check:cws:
+    context: host
+    description: Structural Chrome Web Store validator pass
+    notes: |
+      Read-only validation gate for manifest and static structure health before publish.
+    category: test
+    command:
+      exe: npm
+      args:
+        - run
+        - check:cws
+    requirements:
+      checks:
+        - node-toolchain-ready
+        - node-modules-installed
+    depends_on:
+      - install
+    safe_for_agent: true
+
+  check:cws:ship:
+    context: host
+    description: Ship-readiness validator including listing constraints
+    notes: |
+      Final pre-publish validation gate for publishing constraints.
+    category: test
+    command:
+      exe: npm
+      args:
+        - run
+        - check:cws:ship
+    requirements:
+      checks:
+        - node-toolchain-ready
+        - node-modules-installed
+    depends_on:
+      - install
+    safe_for_agent: true
+
+  test:cli:
+    context: host
+    description: Run CLI-level smoke test for helper package
+    notes: |
+      Quick regression signal used to keep helper package behavior stable.
+    category: test
+    command:
+      exe: npm
+      args:
+        - run
+        - test:cli
+    requirements:
+      checks:
+        - node-toolchain-ready
+        - node-modules-installed
+    depends_on:
+      - install
+    safe_for_agent: true
+
+  test:validator:
+    context: host
+    description: Snapshot validation suite for CWS validator outputs
+    notes: |
+      Snapshot regression checks for validator output across known extension states.
+    category: test
+    command:
+      exe: npm
+      args:
+        - run
+        - test:validator
+    requirements:
+      checks:
+        - node-toolchain-ready
+        - node-modules-installed
+    depends_on:
+      - install
+    safe_for_agent: true
+
+  screenshots:
+    context: host
+    description: Render Chrome Web Store screenshots
+    category: test
+    command:
+      exe: npm
+      args:
+        - run
+        - screenshots
+    requirements:
+      checks:
+        - node-toolchain-ready
+        - node-modules-installed
+    depends_on:
+      - install
+    safe_for_agent: false
+
+  setup:cws:
+    context: host
+    description: Provision Google Cloud project and Chrome Web Store API access
+    notes: |
+      Interactive publishing prerequisite. Writes project-scoped credentials and requires manual review.
+    category: setup
+    command:
+      exe: npm
+      args:
+        - run
+        - setup:cws
+    requirements:
+      checks:
+        - node-toolchain-ready
+        - node-modules-installed
+    safe_for_agent: false
+
+  setup:privacy:
+    context: host
+    description: Generate a privacy policy page from current permissions
+    notes: |
+      Generates policy content from declared extension permissions for release prep.
+    category: setup
+    command:
+      exe: npm
+      args:
+        - run
+        - setup:privacy
+    requirements:
+      checks:
+        - node-toolchain-ready
+        - node-modules-installed
+    safe_for_agent: false
+
+  setup:proxy:
+    context: host
+    description: Deploy credential proxy and write VITE_PROXY_URL
+    notes: |
+      Creates local proxy endpoints for auth-heavy workflows.
+    category: setup
+    command:
+      exe: npm
+      args:
+        - run
+        - setup:proxy
+    requirements:
+      checks:
+        - node-toolchain-ready
+        - node-modules-installed
+    safe_for_agent: false
+
+  version-sync:
+    context: host
+    description: Sync extension version against Chrome Web Store listing
+    notes: |
+      Keeps listing metadata aligned with local package extension version.
+    category: prepublish
+    command:
+      exe: npm
+      args:
+        - run
+        - version-sync
+    requirements:
+      checks:
+        - node-toolchain-ready
+        - node-modules-installed
+    safe_for_agent: false
+
+  ship:prepare:
+    context: host
+    description: Prepare publish artifacts and sync listing metadata
+    notes: |
+      Deterministic prepublish gate: validates ship-readiness, syncs listing metadata,
+      and creates distribution zips before final publish.
+    category: publish
+    run: npm run check:cws:ship && npm run version-sync && npm run zip && npm run zip:firefox
+    requirements:
+      checks:
+        - node-toolchain-ready
+        - node-modules-installed
+    depends_on:
+      - install
+    safe_for_agent: false
+
+  ship:publish:
+    context: host
+    description: Publish prepared CWS artifacts
+    notes: |
+      Uses the latest prepared zip in `.output/` and submits through the dedicated
+      publish script after prepare checks are complete.
+    category: publish
+    command:
+      exe: node
+      args:
+        - scripts/publish-cws.ts
+    requirements:
+      checks:
+        - node-toolchain-ready
+        - node-modules-installed
+        - build-output-dir
+    depends_on:
+      - ship:prepare
+    safe_for_agent: false
+
+  ship:
+    context: host
+    description: Legacy publish shortcut (runs ship task inline)
+    notes: |
+      Kept for compatibility. Prefer `ship:prepare` + `ship:publish` for explicit phase
+      and audit-friendly behavior.
+    category: publish
+    command:
+      exe: npm
+      args:
+        - run
+        - ship
+    requirements:
+      checks:
+        - node-toolchain-ready
+        - node-modules-installed
+    depends_on:
+      - install
+    safe_for_agent: false
+
+  ci:compile:
+    context: host
+    description: Internal CI compile stage
+    category: test
+    command:
+      exe: npm
+      args:
+        - run
+        - compile
+    requirements:
+      checks:
+        - node-toolchain-ready
+        - node-modules-installed
+    depends_on:
+      - install
+    internal: true
+    safe_for_agent: true
+
+  ci:build:
+    context: host
+    description: Internal CI Chrome build stage
+    category: test
+    command:
+      exe: npm
+      args:
+        - run
+        - build
+    requirements:
+      checks:
+        - node-toolchain-ready
+        - node-modules-installed
+    depends_on:
+      - ci:compile
+    internal: true
+    safe_for_agent: true
+
+  ci:build:firefox:
+    context: host
+    description: Internal CI Firefox build stage
+    category: test
+    command:
+      exe: npm
+      args:
+        - run
+        - build:firefox
+    requirements:
+      checks:
+        - node-toolchain-ready
+        - node-modules-installed
+    depends_on:
+      - ci:build
+    internal: true
+    safe_for_agent: true
+
+  ci:test:cli:
+    context: host
+    description: Internal CI CLI test stage
+    category: test
+    command:
+      exe: npm
+      args:
+        - run
+        - test:cli
+    requirements:
+      checks:
+        - node-toolchain-ready
+        - node-modules-installed
+    depends_on:
+      - ci:build:firefox
+    internal: true
+    safe_for_agent: true
+
+  ci:test:validator:
+    context: host
+    description: Internal CI validator test stage
+    category: test
+    command:
+      exe: npm
+      args:
+        - run
+        - test:validator
+    requirements:
+      checks:
+        - node-toolchain-ready
+        - node-modules-installed
+    depends_on:
+      - ci:test:cli
+    internal: true
+    safe_for_agent: true
+
+  ci:check:cws:
+    context: host
+    description: Internal CI CWS structural validation stage
+    category: test
+    command:
+      exe: npm
+      args:
+        - run
+        - check:cws
+    requirements:
+      checks:
+        - node-toolchain-ready
+        - node-modules-installed
+    depends_on:
+      - ci:test:validator
+    internal: true
+    safe_for_agent: true
+
+  ci:check:
+    context: host
+    description: Deterministic CI validation chain
+    notes: |
+      Public CI entrypoint.
+      Internal `ci:*` stages own compile/build/test ordering via `depends_on`;
+      keep this task as the stable external contract surface.
+    category: test
+    command:
+      exe: npm
+      args:
+        - run
+        - check:cws:ship
+    requirements:
+      checks:
+        - node-toolchain-ready
+        - node-modules-installed
+    depends_on:
+      - ci:check:cws
+    safe_for_agent: true
+
+workflows:
+  default: contributor
+  sandbox:
+    intent: validation
+    description: Prove the bounded provider-enforced development-banner artifact lane
+    run:
+      task: sandbox:banner-report
+    notes: |
+      This is V11.21 pressure evidence only. It does not replace or broaden the contributor
+      workflow, extension build, browser validation, or publication proof.
+  contributor:
+    intent: validation
+    description: Non-interactive contributor verification path
+    notes: |
+      Canonical automation front door for contributors and CI. Use this workflow when you
+      need deterministic, non-interactive validation across compile/build/test/CWS gates.
+    setup:
+      task: install
+    run:
+      task: ci:check
+    readiness:
+      checks:
+        - node-toolchain-ready
+        - node-modules-installed
+
+  local:
+    intent: local_development
+    description: Standard local Chrome extension development workflow
+    notes: |
+      Interactive Chrome development path with live reload. Prefer this for day-to-day
+      feature work; avoid using it as an automation workflow.
+    setup:
+      task: install:app
+    run:
+      task: dev
+    readiness:
+      checks:
+        - node-toolchain-ready
+        - node-modules-installed
+
+  local:firefox:
+    intent: local_development
+    description: Local Firefox-first development workflow
+    notes: |
+      Interactive Firefox dev path for browser-specific validation while keeping execution
+      assumptions explicit and separate from non-interactive CI paths.
+    setup:
+      task: install:app
+    run:
+      task: dev:firefox
+    readiness:
+      checks:
+        - node-toolchain-ready
+        - node-modules-installed
+
+  build:
+    intent: local_build
+    description: Build artifacts for local installation testing
+    notes: |
+      Use when you need extension artifacts quickly without running the full validation
+      chain. This is a packaging-focused path, not a release/publish gate.
+    setup:
+      task: install:app
+    run:
+      task: build
+    readiness:
+      checks:
+        - node-toolchain-ready
+        - build-output-dir
+
+  ship:
+    intent: publishing
+    description: Run explicit two-phase publishing
+    notes: |
+      Release workflow for prepared artifacts. Keep this manual and operator-driven because
+      it can push external store state.
+    prepare:
+      action:
+        kind: copy_if_missing
+        from: .secrets.local.json.example
+        to: .secrets.local.json
+    setup:
+      task: ship:prepare
+    run:
+      task: ship:publish
+    readiness:
+      checks:
+        - node-toolchain-ready
+        - node-modules-installed
+        - build-output-dir
+        - package-lock-present
+
+  ci:
+    intent: validation
+    description: Deterministic CI gate for PR-safe readiness
+    notes: |
+      CI parity workflow. Use this when you want the contract-defined equivalent of the
+      repository’s verification lane for pull requests.
+    setup:
+      task: install
+    run:
+      task: ci:check
+    readiness:
+      checks:
+        - node-toolchain-ready
+        - node-modules-installed
+
+  cws:
+    intent: validation
+    description: Run both structural and ship-readiness validator checks
+    notes: |
+      Narrow validator-focused lane for Chrome Web Store policy/readiness checks without
+      running the broader compile/build/test chain.
+    setup:
+      task: check:cws
+    run:
+      task: check:cws:ship
+    readiness:
+      checks:
+        - node-toolchain-ready
+        - node-modules-installed
+
+agent:
+  entrypoint: install
+  default_task: compile
+  safe_tasks:
+    - sandbox:banner-report
+    - install
+    - install:app
+    - compile
+    - build
+    - build:firefox
+    - check:cws
+    - check:cws:ship
+    - test:cli
+    - test:validator
+  verify_after_changes:
+    - compile
+    - build
+  writable_paths:
+    - .ota-pressure/sandbox
+    - entrypoints
+    - entrypoints/background.ts
+    - entrypoints/content.ts
+    - entrypoints/options
+    - entrypoints/popup
+    - entrypoints/sidepanel
+    - entrypoints/welcome
+    - entrypoints/welcome/config.ts
+    - entrypoints/options/config.ts
+    - scripts
+    - packages
+    - assets
+    - docs
+    - skills
+    - proxy
+    - proxy-authed
+    - package.json
+    - node_modules
+    - README.md
+    - CHANGELOG.md
+    - wxt.config.ts
+  protected_paths:
+    - ota.yaml
+    - package-lock.json
+    - .github
+  bootstrap:
+    ota:
+      note: This pressure contract proves unreleased scaffold-materialization surfaces, so bootstrap stays pinned to the exact Ota git revision under test.
+      source:
+        kind: git_rev
+        rev: d796f28e5556c0f1315052e8782ed774e9156922
+  notes: |
+    This contract models the real project entry points used by contributors.
+    `npm ci` is the canonical bootstrap path, and core workflows are `local`,
+    `build`, `contributor`, `check:cws`, `check:cws:ship`, and `ship`.
+    CI uses `workflow contributor` (or `workflow ci`) with `ci:check` for PR-safe validation.
+    `dev` is intentionally interactive and left out of safe task defaults.
+    `zip`, `ship:prepare`, `ship:publish`, `ship`, `setup:*`, and screenshot generation
+    are intentionally not marked as agent-safe because they are publishing/setup paths
+    with interactive effects.

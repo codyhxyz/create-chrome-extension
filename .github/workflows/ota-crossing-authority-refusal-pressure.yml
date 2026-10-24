@@ -1,0 +1,83 @@
+# <!--
+# Copyright (C) 2026 — 2026, Ota. All Rights Reserved.
+# Licensed under the Apache License, Version 2.0.
+# -->
+
+name: Ota Crossing Authority Refusal Pressure
+
+on:
+  push:
+    branches:
+      - bobai/v11-7-crossing-refusal-pressure
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  missing-prebound-authority-refuses-before-mutation:
+    name: missing prebound authority refuses before scaffold mutation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: Install exact Ota source from pressure contract
+        uses: ota-run/setup@493cba84bf7f7c11c9e8e996d832d93a89c62184
+        with:
+          source: contract
+          contract-path: ota-crossing-pressure.yaml
+
+      - name: Validate and discover the governed pressure lane
+        run: |
+          set -euo pipefail
+          ota validate --file ota-crossing-pressure.yaml --json
+          ota doctor --file ota-crossing-pressure.yaml --json
+          ota tasks --file ota-crossing-pressure.yaml --use --json
+          ota tasks --file ota-crossing-pressure.yaml --safe --use --json
+
+      - name: Prove task and workflow refusal before mutation
+        run: |
+          set -euo pipefail
+          test ! -e .ota-pressure/scaffold-sample
+
+          if ota run scaffold:sample --file ota-crossing-pressure.yaml --grant fixture-live --dry-run --json \
+            > task-dry-run.json 2>&1; then
+            task_preview_status=0
+          else
+            task_preview_status=$?
+          fi
+          if ota up --workflow scaffold-pressure --file ota-crossing-pressure.yaml --grant fixture-live --dry-run --json \
+            > workflow-dry-run.json 2>&1; then
+            workflow_preview_status=0
+          else
+            workflow_preview_status=$?
+          fi
+          test "$task_preview_status" -ne 0
+          test "$workflow_preview_status" -ne 0
+          cat task-dry-run.json
+          jq -e '.ok == false and .execution_started == false and .crossing_grant_admission.reason_family == "crossing_authority_unavailable"' task-dry-run.json
+          cat workflow-dry-run.json
+          jq -e '.ok == false and .governance.preflight.refusal.execution_started == false and .governance.preflight.refusal_reason_family == "crossing_authority_unavailable"' workflow-dry-run.json
+
+          if ota run scaffold:sample --file ota-crossing-pressure.yaml --grant fixture-live; then
+            task_status=0
+          else
+            task_status=$?
+          fi
+          if ota up --workflow scaffold-pressure --file ota-crossing-pressure.yaml --grant fixture-live; then
+            workflow_status=0
+          else
+            workflow_status=$?
+          fi
+          test "$task_status" -ne 0
+          test "$workflow_status" -ne 0
+          test ! -e .ota-pressure/scaffold-sample
+
+      - name: Record boundary
+        run: |
+          cat <<'EOF' >> "$GITHUB_STEP_SUMMARY"
+          This job proves only fail-closed behavior when the fixed prebound authority store is absent.
+          It does not self-create authority files or claim independent authority separation on a GitHub-hosted runner.
+          Valid, expired, revoked, and out-of-scope grant pressure requires a separately provisioned non-root runner.
+          EOF

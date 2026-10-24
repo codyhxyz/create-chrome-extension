@@ -2,11 +2,13 @@ import { spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync, existsSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 
-process.env.CCE_REPO_URL = process.env.CCE_REPO_URL || new URL('../../..', import.meta.url).pathname;
+process.env.CCE_REPO_URL =
+  process.env.CCE_REPO_URL || fileURLToPath(new URL('../../..', import.meta.url));
 
-const CLI = new URL('../bin/cli.mjs', import.meta.url).pathname;
+const CLI = fileURLToPath(new URL('../bin/cli.mjs', import.meta.url));
 
 function run(args, cwd) {
   return spawnSync('node', [CLI, ...args], { cwd, encoding: 'utf8' });

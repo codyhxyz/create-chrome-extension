@@ -1,0 +1,141 @@
+name: Ota Contract Matrix
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  matrix:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          # `scaffold:sample` pins a historical local Git commit as its immutable template source.
+          # The default one-commit checkout cannot resolve that declared source.
+          fetch-depth: 0
+
+      - name: Install ota from contract bootstrap truth
+        uses: ota-run/setup@493cba84bf7f7c11c9e8e996d832d93a89c62184
+        with:
+          source: contract
+          contract-path: ota.yaml
+
+      - name: Show ota version
+        run: ota --version
+
+      - name: Run native contract suite
+        run: |
+          set -euo pipefail
+          mkdir -p .ota-ci/logs/native
+
+          ota validate --plain 2>&1 | tee .ota-ci/logs/native/validate.txt
+          ota tasks --use --plain 2>&1 | tee .ota-ci/logs/native/tasks-use.txt
+          ota tasks --safe --use --plain 2>&1 | tee .ota-ci/logs/native/tasks-safe-use.txt
+          ota execution plan --workflow contributor --mode native --plain 2>&1 | tee .ota-ci/logs/native/execution-plan-native.txt
+          ota up --workflow contributor --mode native --plain 2>&1 | tee .ota-ci/logs/native/up-contributor-native.txt
+          ota doctor --workflow contributor --mode native --plain 2>&1 | tee .ota-ci/logs/native/doctor-native.txt
+
+          ota run scaffold:sample --mode native --dry-run --json 2>&1 | tee .ota-ci/logs/native/run-scaffold-sample-dry-run-native.json
+          ota run scaffold:sample --mode native --plain --stream 2>&1 | tee .ota-ci/logs/native/run-scaffold-sample-native.txt
+          ota run install --mode native --plain --stream 2>&1 | tee .ota-ci/logs/native/run-install-native.txt
+          ota run compile --mode native --plain --stream 2>&1 | tee .ota-ci/logs/native/run-compile-native.txt
+          ota run build --mode native --plain --stream 2>&1 | tee .ota-ci/logs/native/run-build-native.txt
+          ota run build:firefox --mode native --plain --stream 2>&1 | tee .ota-ci/logs/native/run-build-firefox-native.txt
+          ota run check:cws --mode native --plain --stream 2>&1 | tee .ota-ci/logs/native/run-check-cws-native.txt
+
+      - name: Run container contract suite
+        run: |
+          set -euo pipefail
+          mkdir -p .ota-ci/logs/container
+
+          # `contributor` is intentionally native. Exercise the separate container-owned build lane.
+          ota execution plan --workflow build --mode container --plain 2>&1 | tee .ota-ci/logs/container/execution-plan-container.txt
+
+          backend=""
+          if docker info >/dev/null 2>&1; then
+            backend="docker"
+          elif command -v podman >/dev/null 2>&1 && podman info >/dev/null 2>&1; then
+            backend="podman"
+          fi
+
+          if [ -n "$backend" ]; then
+            echo "Using healthy container backend: $backend" | tee .ota-ci/logs/container/backend.txt
+
+            image="node:20-bookworm"
+            image_probe_log=".ota-ci/logs/container/image-probe.txt"
+            set +e
+            if [ "$backend" = "docker" ]; then
+              docker run --rm "$image" node --version >"$image_probe_log" 2>&1
+            else
+              podman run --rm "$image" node --version >"$image_probe_log" 2>&1
+            fi
+            image_probe_status=$?
+            set -e
+
+            if [ "$image_probe_status" -ne 0 ]; then
+              echo "Container backend is reachable but contract image is not runnable on ${RUNNER_OS}; asserting honest container-mode failure." | tee -a .ota-ci/logs/container/backend.txt
+              cat "$image_probe_log"
+              backend=""
+            fi
+          fi
+
+          if [ -n "$backend" ]; then
+            ota up --workflow build --mode container --plain 2>&1 | tee .ota-ci/logs/container/up-build-container.txt
+            ota doctor --workflow build --mode container --plain 2>&1 | tee .ota-ci/logs/container/doctor-container.txt
+            ota run install:app --mode container --plain --stream 2>&1 | tee .ota-ci/logs/container/run-install-app-container.txt
+            ota run build --mode container --plain --stream 2>&1 | tee .ota-ci/logs/container/run-build-container.txt
+            ota run build:firefox --mode container --plain --stream 2>&1 | tee .ota-ci/logs/container/run-build-firefox-container.txt
+            exit 0
+          fi
+
+          echo "No runnable container path on ${RUNNER_OS}; asserting honest container-mode failure." | tee -a .ota-ci/logs/container/backend.txt
+
+          set +e
+          ota doctor --workflow build --mode container --plain > .ota-ci/logs/container/doctor-container.txt 2>&1
+          ota up --workflow build --mode container --plain > .ota-ci/logs/container/up-build-container.txt 2>&1
+          up_status=$?
+          set -e
+
+          cat .ota-ci/logs/container/doctor-container.txt
+          cat .ota-ci/logs/container/up-build-container.txt
+
+          test "$up_status" -ne 0
+
+          if grep -Ei "no matching manifest|image operating system|cannot be used on this platform" \
+            .ota-ci/logs/container/doctor-container.txt \
+            .ota-ci/logs/container/up-build-container.txt; then
+            echo "Container-mode fallback accepted: selected image is not runnable on this host container backend."
+            exit 0
+          fi
+
+          grep -E "Container image unavailable|Container execution backend unavailable|Missing container execution backend CLI" \
+            .ota-ci/logs/container/doctor-container.txt
+          grep -E "Container image unavailable|Container execution backend unavailable|Missing container execution backend CLI" \
+            .ota-ci/logs/container/up-build-container.txt
+
+      - name: Upload ota matrix logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ota-contract-matrix-${{ matrix.os }}
+          path: .ota-ci/logs

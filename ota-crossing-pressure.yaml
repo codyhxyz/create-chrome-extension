@@ -1,0 +1,54 @@
+# <!--
+# Copyright (C) 2026 — 2026, Ota. All Rights Reserved.
+# Licensed under the Apache License, Version 2.0.
+# -->
+
+version: 1
+project:
+  name: create-chrome-extension-crossing-pressure
+  description: Isolated audited-crossing authority refusal pressure for the real scaffold action.
+  type: application
+
+governance:
+  crossing_authority:
+    authority_id: pressure-fixture-authority
+
+execution:
+  default_context: host
+  contexts:
+    host:
+      backend: native
+
+tasks:
+  scaffold:sample:
+    context: host
+    category: setup
+    description: Materialize the repository's real sample scaffold action.
+    action:
+      kind: ensure_git_template
+      path: .ota-pressure/scaffold-sample
+      source:
+        git: .
+        ref: 69a34fb0c8747b13878e2164487b2ed692be7488
+    effects:
+      writes:
+        - .ota-pressure
+    safe_for_agent: false
+
+workflows:
+  default: scaffold-pressure
+  scaffold-pressure:
+    intent: verification
+    run:
+      task: scaffold:sample
+
+agent:
+  bootstrap:
+    ota:
+      source:
+        kind: git_rev
+        rev: e9d8d8d6d206c65311f48d61648c8467b90f0c03
+  notes: >
+    This pressure-only contract verifies that absent prebound authority refuses the real scaffold
+    action before the action creates its output. It does not claim a GitHub-hosted runner can
+    independently separate authority administration from the job principal.

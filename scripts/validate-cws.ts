@@ -102,6 +102,10 @@ interface SourceFile {
   content: string;
 }
 
+function toPosixPath(p: string): string {
+  return p.replaceAll('\\', '/');
+}
+
 interface Context {
   manifest: Record<string, any>;
   sources: SourceFile[];
@@ -141,7 +145,7 @@ function loadSources(): SourceFile[] {
   for (const r of roots) {
     for (const full of walk(join(ROOT, r))) {
       files.push({
-        relPath: relative(ROOT, full),
+        relPath: toPosixPath(relative(ROOT, full)),
         content: readFileSync(full, 'utf8'),
       });
     }
