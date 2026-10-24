@@ -1,5 +1,5 @@
 <!--
-  Canonical Chrome-Web-Store publishing directive (v1).
+  Canonical Chrome-Web-Store publishing directive (v2).
   Source of truth for both the factory-root .claude/publishing-directive.md
   and every child project's .claude/publishing-directive.md. The `cce-init`
   skill (Phase H) copies this file byte-for-byte into the child project.
@@ -43,6 +43,7 @@ Every one of those is handled by the skill's phases. Duplicating them is the fai
 - **"Marquee / promo tile is optional — I'll skip it."** False. CWS does not require them, but Google's Featured-badge automation checks for a **complete listing page with promotional images**. Missing tiles disqualify the extension from Featured placement, which is the biggest single discoverability lever in the store. The tiles take under a minute each via `/cws-screens` → Step 7. Always ship both the 440×280 small and the 1400×560 marquee unless the user has explicitly said they are not marketing this build. The validator rule `ship-ready-promo-tiles` warns (not errors) when either is missing — surface that warning, do not silently dismiss it. This is the single most common wrong takeaway in upstream transcripts; do not add to the count.
 - **"Privacy policy is optional if I collect no data."** False. The Privacy tab must be filled in with a hosted URL even for zero-data extensions — the CWS dashboard requires it before the Submit button activates for extensions with any permission that *could* access user data. `/cws-ship` handles this via the `ship-ready-privacy-policy-reachable` rule.
 - **"Listing copy I already wrote in the dashboard will stay — I don't need to fix the manifest."** Half-true. The manifest auto-populates the dashboard only on first upload; subsequent uploads do not overwrite. But `listing-drift` detection exists for a reason: if you've edited the dashboard and not the manifest, you're building a divergent truth that will bite on the next submission. `/cws-ship` Phase A.3 resolves this deterministically.
+- **"That field is dashboard-only, so the user has to do it."** False on macOS. Chrome blocks browser-automation extensions from the Web Store dashboard, but `cws-ship`'s `scripts/cws-dashboard.mjs` drives it through AppleScript: detailed description, URLs, Privacy tab, status, cancel review, save, submit. The only dashboard step left to the user is dragging in images (screenshots, promo tiles).
 
 **If the skill is not installed in this session.** Stop. Print exactly:
 

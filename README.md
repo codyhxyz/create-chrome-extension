@@ -117,7 +117,7 @@ Inside a freshly cloned factory repo, the canonical session is:
 3. `/create-chrome-extension:cws-screens` — render screenshots
 4. `/create-chrome-extension:cws-video` — produce the 30-second promo (optional)
 5. `/create-chrome-extension:setup-cws-credentials` — Google Cloud + OAuth (one-time)
-6. `/create-chrome-extension:cws-ship` — version-sync, upload, poll
+6. `/create-chrome-extension:cws-ship` — version-sync, upload, poll, and every dashboard-only field (detailed description, URLs, Privacy tab, status, cancel review, submit) driven in your signed-in Chrome on macOS
 
 Each skill is independently invocable — re-run `cws-content` after a copy change, re-run `cws-screens` after a UI change, etc.
 

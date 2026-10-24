@@ -20,6 +20,7 @@ invokes:
   - "npm run ship"                            # full orchestrated gate (check → version-sync → zip → publish)
   - "npx tsx scripts/publish-cws.ts --json"   # direct submit+poll (post-mortem / status-only paths)
   - "npm version patch"                       # offered to user, never run silently
+  - "node <skill-dir>/scripts/cws-dashboard.mjs"  # dashboard-only fields, status, cancel/save/submit (macOS)
   - "<skill>cws-content</skill>"              # delegate content rule fixes
   - "<skill>cws-screens</skill>"              # delegate screenshot rule fixes
   - "<skill>cws-video</skill>"                # delegate video rule fixes
@@ -47,6 +48,34 @@ Phase D — Submit     : run `npm run ship`, parse publish-cws terminal state, h
 ```
 
 If the user interrupts (`stop`, `cancel`, `not yet`), halt at the current phase and report what's next when they come back.
+
+---
+
+## Dashboard automation — do dashboard steps yourself
+
+The CWS API uploads and publishes packages. Everything else in the developer dashboard (detailed description, homepage/support URLs, review status, cancelling a review, Save draft, Submit for review, Privacy tab, rejection text) you drive with the bundled script, in the user's own signed-in Chrome:
+
+```bash
+D="<this skill's base directory>/scripts/cws-dashboard.mjs"
+node "$D" doctor                                   # once per session: macOS, Chrome, JS-from-Apple-Events, signed in
+node "$D" status  <itemId>                         # status ("Pending review", "Published - public", ...), locked?, versions
+node "$D" get     <itemId>                         # description, homepage, support, promo video, blockers
+node "$D" set     <itemId> --description-file f [--homepage url] [--support url] [--cancel-review]
+node "$D" save    <itemId>                         # Save draft, then reloads and reads back what the server kept
+node "$D" submit  <itemId> [--no-auto-publish]     # Submit for review, confirms the dialog, waits for "Pending review"
+node "$D" cancel-review <itemId>
+node "$D" js      <itemId> <edit|package|privacy|distribution> <file|->   # anything else, e.g. Privacy tab checkboxes
+```
+
+Every command prints one JSON object (`ok`, plus `error` and `hint` on failure).
+
+**Rules.**
+- **Never tell the user to "open the dashboard and …" for anything this script covers.** Run it. Handing dashboard work back is the failure mode this section exists to prevent.
+- **Browser-automation extensions cannot do this.** Chrome blocks every extension (Claude in Chrome included) from `chrome.google.com/webstore`. Don't try, and don't conclude it's impossible: AppleScript `execute javascript` is not an extension and works.
+- **The listing is read-only while a submission is in review** ("You may not edit or publish an item that is in review"). `set --cancel-review` cancels the review first; the uploaded package stays in the draft. Then `save` and `submit`, so package and listing go through one review.
+- **Uploading a package right after editing the listing, or the reverse, can lock you out.** `npm run ship` submits for review, which locks the listing. Make listing edits first (`set` → `save`), then ship; or ship, then `set --cancel-review` → `save` → `submit`.
+- **If `doctor` fails:** `chrome-js-from-apple-events-off` → tell the user the one menu item to toggle (View › Developer › Allow JavaScript from Apple Events), then continue. `not-signed-in` → ask them to sign in once. `macos-only` → fall back to telling the user the exact field values to paste.
+- **Not covered yet:** uploading images (screenshots, promo tiles) and zips through the dashboard. Zips go through the API (`npm run ship`); images are the one thing the user still drags in.
 
 ---
 
@@ -149,10 +178,10 @@ For `ship-ready-video`, analogous:
 >
 > One of these is authoritative. Which?
 > - **(a) The local manifest** (my repo is the source of truth) → we'll overwrite the live listing on next publish. Confirm by continuing.
-> - **(b) The live listing** (someone edited it in the CWS dashboard) → stop, update `wxt.config.ts` to match, then re-invoke me.
+> - **(b) The live listing** (someone edited it in the CWS dashboard) → I'll read the live values (`cws-dashboard.mjs get`) and hand them to `cws-content` to write into `wxt.config.ts`, then continue.
 > - **(c) Defer** → ship anyway and accept that the publish will overwrite the live copy with what's in the manifest.
 
-Let the user pick (a)/(b)/(c) explicitly before proceeding. If they pick (b), exit — they need to manually reconcile before re-invoking. If they pick (a) or (c), continue to Phase B.
+Let the user pick (a)/(b)/(c) explicitly before proceeding. If they pick (b), run `get`, delegate the write to `cws-content` with the live values, re-run Phase A, then continue. If they pick (a) or (c), continue to Phase B.
 
 Same treatment for `listing-drift` on `description` if it fires.
 
@@ -207,7 +236,7 @@ Wait for explicit confirmation (`patch`, `minor`, `major`). Then run the corresp
 
 > CWS API secrets aren't configured (`CWS_EXTENSION_ID`, `CWS_CLIENT_ID`, `CWS_CLIENT_SECRET`, `CWS_REFRESH_TOKEN`). Without them, I can't verify your version against the live store or auto-publish. Pick:
 >
-> **(a) Proceed manually.** I'll run `npm run check:cws:ship && wxt zip` to produce `.output/<name>-chrome.zip`. You upload that to [the CWS developer dashboard](https://chrome.google.com/webstore/devconsole) yourself.
+> **(a) Proceed without the API.** I'll run `npm run check:cws:ship && wxt zip` to produce `.output/<name>-chrome.zip`. You upload that one file in the dashboard; I fill and submit everything else there.
 > **(b) Configure secrets first.** See `docs/06-keepalive-publish.md` for the 4-secret OAuth walkthrough. Come back when it's set up.
 > **(c) Cancel.**
 
@@ -227,7 +256,7 @@ Default recommendation is (a). Wait for confirmation before running `npm version
 > version-sync errored: `<error>`. This usually means OAuth auth failed — your refresh token may have expired. Options:
 >
 > **(a) Fix secrets and retry.** See `docs/06-keepalive-publish.md`.
-> **(b) Proceed manually.** Skip automated publish; produce a zip and upload via the dashboard.
+> **(b) Proceed without the API.** Skip automated publish; you upload the zip in the dashboard, I do the rest there.
 > **(c) Cancel.**
 
 ---
@@ -326,9 +355,10 @@ Do not over-celebrate. One sentence of acknowledgment, then a practical next-ste
 > Submission accepted — now in human review. Typical CWS review time is **1-3 business days**, sometimes longer for first-time publishers or for updates that change permissions.
 >
 > What to do:
-> 1. Check the [CWS dashboard](https://chrome.google.com/webstore/devconsole) for status.
-> 2. If you want me to re-check, invoke me with `/cws-ship status` — I'll re-poll `publish-cws` against the existing submission.
-> 3. If >1 week goes by with no update, email developer support (link in `docs/03-cws-best-practices.md`).
+> 1. Nothing, for now. Ask me (`/cws-ship status`) any time and I'll read the dashboard status for you.
+> 2. If >1 week goes by with no update, email developer support (link in `docs/03-cws-best-practices.md`).
+>
+> Note: the listing is locked while this review runs. If you want listing changes in the same review, say so now; I'll cancel, edit, and resubmit together.
 
 Stop.
 
@@ -357,7 +387,7 @@ Once a code is identified, invoke the matching recipe.
 
 > Polling timed out before the submission reached a terminal state. This does NOT mean the submission failed — CWS review can take longer than the poll window.
 >
-> Check the [CWS dashboard](https://chrome.google.com/webstore/devconsole). Likely your submission is now `in-review`. When you want to re-poll, re-invoke me with `/cws-ship status`.
+Then run `cws-dashboard.mjs status <itemId>` yourself and report the real status (usually "Pending review"). Don't re-run `npm run ship`; that would re-upload.
 
 ### D.8 `upload-failed`
 
@@ -370,17 +400,13 @@ Once a code is identified, invoke the matching recipe.
 
 ### D.9 `/cws-ship status` mode
 
-If invoked with the `status` argument (after a prior submission), skip Phases A-C entirely. Run:
+If invoked with the `status` argument (after a prior submission), skip Phases A-C entirely. Do **not** run `publish-cws.ts`: it submits and polls as one chain, so it would re-upload. Read the dashboard instead:
 
 ```bash
-npx tsx scripts/publish-cws.ts --json --no-auto-publish
+node "<this skill's base directory>/scripts/cws-dashboard.mjs" status <itemId>
 ```
 
-No — that would re-upload. Instead, the skill's "status mode" is limited by what `publish-cws.ts` exposes today: it doesn't have a separate "status only" mode, it submits+polls as one chain. So status mode is best-effort:
-
-> I can't re-poll an existing submission without re-uploading (that's a limitation of the current `publish-cws.ts`). For status, check the [CWS developer dashboard](https://chrome.google.com/webstore/devconsole) directly. If you want to ship a NEW version, invoke me normally.
-
-Flag this to the user verbatim. Do not re-upload silently.
+Report `status` and `versions` in one line (for example "2.0.12 pending review; 2.0.11 live"). If `status` mentions rejection, run `js <itemId> edit -` with `return document.body.innerText` to read the reason, then route to D.5.
 
 ---
 
@@ -395,18 +421,10 @@ If CWS secrets aren't configured and the user picked option (a) in Phase B, the 
 
    > Zip produced at `.output/<name>-chrome.zip`.
    >
-   > Manual upload steps:
-   > 1. Open [CWS developer dashboard](https://chrome.google.com/webstore/devconsole).
-   > 2. Pick the item (or "+ New item" for a first submission).
-   > 3. Upload the zip.
-   > 4. Fill in listing fields from `wxt.config.ts` (name, description) if this is a first submission.
-   > 5. Upload screenshots from `.output/screenshots/*.png` (drag-and-drop).
-   > 6. Fill in the Privacy tab (data usage, Limited Use certification — both mandatory per Jan 2025).
-   > 7. Click "Submit for review."
-   >
-   > When the dashboard reports `Published`, your extension is live. There's no API callback for manual submissions.
+   > Two things only you can do, because they're file uploads: in the dashboard, upload this zip (or "+ New item" for a first submission), and drag in the PNGs from `.output/screenshots/`. Tell me when that's done and I'll do the rest.
 
-5. Do NOT run `npm run ship` in this path — it will fail at `publish-cws` without secrets. Stop cleanly.
+5. When the user says the uploads are done, do the rest yourself with `cws-dashboard.mjs`: `set` the detailed description (from `cws-content`'s output) and URLs, fill the Privacy tab with `js <itemId> privacy` (privacy policy URL, data-usage checkboxes, Limited Use certification, using `store/PRIVACY.md` as the source of truth), `save`, `submit`, then `status`.
+6. Do NOT run `npm run ship` in this path — it will fail at `publish-cws` without secrets.
 
 ---
 
@@ -461,9 +479,10 @@ This generates `store/PRIVACY.md` and `store/index.html` from the manifest's dec
 git add store/ entrypoints/welcome/config.ts && git commit -m "chore: privacy policy" && git push
 ```
 
-Then update the CWS dashboard:
-- **Privacy tab → Privacy policy URL** field — paste the URL from the script.
-- **Privacy tab → Data usage** checkboxes and **Limited Use certification** — both mandatory as of Jan 2025; the script can't fill these because the CWS API doesn't expose them. Open the dashboard and check the relevant boxes (the generated `store/PRIVACY.md` is the authoritative source for what to disclose).
+Then update the CWS dashboard yourself with `cws-dashboard.mjs js <itemId> privacy <file>` (read the tab first with `return document.body.innerText`, then set fields with the native-setter pattern the script uses):
+- **Privacy tab → Privacy policy URL** — the URL from the script.
+- **Privacy tab → Data usage** checkboxes and **Limited Use certification** — both mandatory as of Jan 2025, and not in the CWS API. `store/PRIVACY.md` is the authoritative source for what to tick.
+Then `save` and `submit`.
 
 **Self-host escape hatch.** If the user wants to host elsewhere (their own domain, Notion page, whatever), pass `--self-host=<url>` to the same script. It writes `store/PRIVACY.md` (so they have a customizable source) and points `links.privacy` at their URL.
 
@@ -486,13 +505,13 @@ Then update the CWS dashboard:
 > Rejected for **listing fields blank / insufficient (Yellow Zinc)**. This shouldn't happen after a green ship validator — so let's diagnose which of three things went wrong:
 >
 > 1. **Did you upload screenshots to the dashboard?** `npm run screenshots` generates PNGs in `.output/screenshots/`, but there's no API for screenshot upload. You drag them in. If the dashboard shows zero screenshots, that's your culprit.
-> 2. **Are the dashboard fields populated?** Open [developer dashboard](https://chrome.google.com/webstore/devconsole) → your item → Store listing tab. Check:
->    - Detailed description (dashboard-only; not in manifest).
+> 2. **Are the dashboard fields populated?** I'm reading the Store listing tab now (`cws-dashboard.mjs get <itemId>`). Checking:
+>    - Detailed description (dashboard-only; not in manifest). If blank, I'll fill it with `set`.
 >    - Category.
 >    - Language.
 >    - Screenshots (1-5) — required.
 >    - **Small promo tile (440×280) and Marquee promo tile (1400×560)** — CWS marks these optional, but Google's Featured-badge automation treats a missing tile as an incomplete listing. Ship both. Invoke `/cws-screens` → Step 7 if you haven't produced them.
->    - If any are blank, fill and re-submit.
+>    - Text fields that are blank, I fill (`set` → `save` → `submit`). Screenshots and tiles are the only part you drag in.
 > 3. **Is there drift between manifest and dashboard?** Let me re-run the ship validator now — if `listing-drift` fires as a warning, we know the manifest and dashboard disagree. (Triggering that check explicitly.)
 
 After re-running the validator, if `listing-drift` surfaces, walk the user through the Phase A.3 decision (local authoritative vs. dashboard authoritative). This recipe effectively re-opens Phase A on the drift rule.
@@ -593,7 +612,7 @@ If the rejection detail doesn't include a code or the code doesn't match any rec
 > Options:
 >
 > 1. **Check your publisher email.** CWS usually sends a more detailed rejection reason by email, naming a specific policy. When you have it, tell me the code (e.g. "Blue Argon", "Purple Lithium") and I'll run the matching recipe.
-> 2. **Check the CWS dashboard → your item → "Appeal / Get help"** for the full rejection reason.
+> 2. **I'll read the full rejection reason from the dashboard** (`cws-dashboard.mjs js <itemId> edit -` with `return document.body.innerText`).
 > 3. **Review `docs/03-cws-best-practices.md`** — the rejection categories are grouped there by color family.
 
 Do not guess. Do not invent a fix for a rejection you don't understand.
@@ -725,7 +744,7 @@ Output:
 Skill says:
 
 > CWS API secrets aren't configured. Pick:
-> **(a) Proceed manually.** I'll produce `.output/review-radar-chrome.zip` — you upload it to the CWS dashboard yourself.
+> **(a) Proceed without the API.** I'll produce `.output/review-radar-chrome.zip`. You upload that one file; I do the rest in the dashboard.
 > **(b) Configure secrets first.** See `docs/06-keepalive-publish.md`.
 > **(c) Cancel.**
 
@@ -766,17 +785,13 @@ Skill says:
 
 > Zip produced at `.output/review-radar-chrome.zip`.
 >
-> Manual upload steps:
-> 1. Open [CWS developer dashboard](https://chrome.google.com/webstore/devconsole).
-> 2. "+ New item" (first submission).
-> 3. Upload the zip.
-> 4. Fill listing fields (name/description should auto-populate from the manifest).
-> 5. Drag-and-drop the 5 PNGs from `.output/screenshots/` into the Screenshots section.
-> 6. Fill Privacy tab: data usage checkboxes + Limited Use certification (both mandatory).
-> 7. Paste your privacy policy URL (should match `links.privacy` in `welcome/config.ts`).
-> 8. Submit for review.
->
-> When the dashboard shows "Published," you're live. (There's no API callback for manual submissions, so I can't report `live` / `in-review` for you — the dashboard is authoritative.)
+> Two uploads only you can do: in the dashboard, "+ New item" and upload this zip, then drag in the 5 PNGs from `.output/screenshots/`. Tell me when that's done.
+
+User: "done."
+
+Skill runs `cws-dashboard.mjs doctor`, then `set <itemId> --description-file <cws-content's detailed description>`, fills the Privacy tab via `js <itemId> privacy` (policy URL from `links.privacy`, data-usage boxes, Limited Use certification), `save`, `submit`, `status`:
+
+> Submitted. Status: Pending review (auto-publish on). I'll read the status whenever you ask.
 
 End of run.
 
@@ -795,7 +810,7 @@ B. version-sync skipped (no secrets)
    ↓ user picks manual
 C. summary + confirm
    ↓ user confirms
-D. `npm run zip` → zip produced, manual upload instructions printed
+D. `npm run zip` → user uploads zip + PNGs → skill fills listing/privacy, saves, submits via cws-dashboard.mjs
 ```
 
 If the user had CWS secrets configured, Phase D would instead run `npm run ship` end-to-end and reach a `live` / `in-review` / `rejected` terminal state.
@@ -810,7 +825,8 @@ If the user had CWS secrets configured, Phase D would instead run `npm run ship`
 - **`npm run ship` halts at step 1 despite Phase A being green.** Drift between invocations — someone edited a file between Phases A and D. Re-run Phase A.
 - **`npm run ship` halts at step 2 despite Phase B being green.** Someone published a newer version from another machine. Re-run Phase B to reconcile, bump version again.
 - **Rejection detail doesn't match any known code.** Use Recipe R-unknown. Do not invent a recipe.
-- **`publish-cws` returns `timeout`.** The submission is most likely `in-review` on the CWS side — polling just gave up. Point the user at the dashboard; don't re-run `npm run ship` (that would re-upload).
+- **`publish-cws` returns `timeout`.** The submission is most likely `in-review` on the CWS side — polling just gave up. Read it with `cws-dashboard.mjs status`; don't re-run `npm run ship` (that would re-upload).
+- **`set` returns `listing-locked`.** A submission is in review. Ask nothing; if the user wanted these listing changes live, re-run with `--cancel-review`, then `save` and `submit`.
 
 ---
 
@@ -820,5 +836,5 @@ If the user had CWS secrets configured, Phase D would instead run `npm run ship`
 - Does not re-implement validator rules. If you're tempted to inline a rule check here, stop — that logic lives in `scripts/validate-cws.ts`.
 - Does not silently bump the version. `npm version patch` runs only on explicit user confirmation.
 - Does not retry submissions automatically. On `failed` / `timeout` / `rejected`, offer the user a retry; don't loop.
-- Does not touch the CWS dashboard UI. Some fields (detailed description, screenshots, privacy URL, Limited Use certification) must be set in the dashboard by the user — the skill can only tell them to do it.
+- Does not upload files through the dashboard UI. Screenshots, promo tiles, and (without API secrets) the zip are dragged in by the user. Every other dashboard field it sets itself with `scripts/cws-dashboard.mjs`.
 - Does not invent rejection codes or fix recipes for rejections it doesn't understand. Use Recipe R-unknown.

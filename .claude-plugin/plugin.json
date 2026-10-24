@@ -1,14 +1,14 @@
 {
   "name": "create-chrome-extension",
-  "description": "Six skills that scaffold a Chrome extension, fill the listing copy, capture screenshots, set up Chrome Web Store OAuth, and orchestrate submission. Pairs with the cce-factory WXT template.",
-  "version": "0.1.0",
+  "description": "Eight skills that scaffold or import a Chrome extension, fill the listing copy, capture screenshots, set up Chrome Web Store OAuth, orchestrate submission, and drive the Web Store dashboard for you. Pairs with the cce-factory WXT template.",
+  "version": "0.2.0",
   "author": {
     "name": "Cody Hergenroeder",
     "email": "plugins@codyh.xyz"
   },
   "homepage": "https://github.com/codyhxyz/create-chrome-extension",
   "repository": "https://github.com/codyhxyz/create-chrome-extension",
-  "license": "MIT",
+  "license": "AGPL-3.0",
   "keywords": [
     "claude-code",
     "claude-code-plugin",

@@ -1,6 +1,6 @@
 # Chrome Extension Factory
 
-<!-- CCE:publishing-directive:begin v1 -->
+<!-- CCE:publishing-directive:begin v2 -->
 @.claude/publishing-directive.md
 
 <!--

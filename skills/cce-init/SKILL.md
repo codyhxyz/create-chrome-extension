@@ -455,7 +455,7 @@ Phase H treats that file as authoritative. It does NOT read from the factory's o
 3. **Splice the marker block into `<repo>/CLAUDE.md`.** The block is exactly:
 
    ```
-   <!-- CCE:publishing-directive:begin v1 -->
+   <!-- CCE:publishing-directive:begin v2 -->
    @.claude/publishing-directive.md
 
    <!--
@@ -655,7 +655,7 @@ Skill writes `.claude/publishing-directive.md` by copying byte-for-byte from `sk
 Skill splices the marker block into `CLAUDE.md` (idempotent — prefix-matches `<!-- CCE:publishing-directive:begin` so stale versions get replaced cleanly):
 
 ```
-<!-- CCE:publishing-directive:begin v1 -->
+<!-- CCE:publishing-directive:begin v2 -->
 @.claude/publishing-directive.md
 
 <!--

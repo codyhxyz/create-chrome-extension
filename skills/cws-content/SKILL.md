@@ -14,11 +14,12 @@ invokes:
 writes:
   - "wxt.config.ts"                      # manifest.name, manifest.description, manifest.optional_host_permissions
   - "entrypoints/welcome/config.ts"      # valueProp, activationSurfaces, steps, links
+  - "store/listing-description.txt"      # detailed (dashboard-only) description, Recipe E
 ---
 
 # cws-content skill
 
-You are driving the `cws-content` skill. Your single responsibility is to take the user from **"`npm run check:cws:ship` is red with content errors"** to **"green, ready to hand off to submission."** You do not submit. You do not zip. You do not touch code files other than `wxt.config.ts` and `entrypoints/welcome/config.ts`.
+You are driving the `cws-content` skill. Your single responsibility is to take the user from **"`npm run check:cws:ship` is red with content errors"** to **"green, ready to hand off to submission."** You do not submit. You do not zip. You do not touch code files other than `wxt.config.ts`, `entrypoints/welcome/config.ts`, and `store/listing-description.txt`.
 
 The factory's invariant: on a fresh clone, `check:cws:ship` fails with 4 content errors (`listing-ready-name`, `listing-ready-description`, `ship-ready-optional-host`, `ship-ready-welcome-config`). After a full cws-content run with realistic user input, it passes. That is the definition of done for this skill.
 
@@ -673,6 +674,30 @@ Skill reports: "All 4 content errors cleared. `check:cws:ship` passes. When read
 
 ---
 
+## Recipe E — Detailed description (dashboard-only, no validator rule)
+
+The 132-char `manifest.description` is the summary. The **detailed description** is the long text on the store page, and the main thing search engines and store search read. It lives only in the dashboard: the manifest fills it on first upload and never again. Run this recipe when the user asks for listing copy, when `cws-ship` Recipe R3/R7 sends them here, or after Recipes A/B on an item that is already live.
+
+**File write target:** `store/listing-description.txt` (plain text; CWS renders no markdown). Keeping it in the repo makes it reviewable and diffable.
+
+**Quality criteria:**
+- First two sentences state the problem and the fix. They show above the fold.
+- Then short `•` bullets of real features, a privacy line, and any platform limits (desktop only, etc.).
+- Use the words people actually search for, once each, in natural sentences. More than ~3 repeats of a keyword trips Yellow Argon.
+- ≤16,000 characters; 800 to 2,000 is the useful range.
+
+**Push it live (macOS).** If the item already exists in the store, don't ask the user to paste it:
+
+```bash
+D="<cws-ship skill base directory>/scripts/cws-dashboard.mjs"   # sibling skill: ../cws-ship/scripts/
+node "$D" set  <itemId> --description-file store/listing-description.txt [--homepage <site>] [--cancel-review]
+node "$D" save <itemId>
+```
+
+Then hand off to `cws-ship` to `submit` (or `npm run ship` if a new package is going out too). `--cancel-review` is needed when a submission is already in review; mention that you're doing it.
+
+---
+
 ## Failure-mode notes (things that can go wrong)
 
 - **Validator still fires after a write.** Read the current file contents; compare to what you wrote; if they don't match, the Edit tool's `old_string` didn't match the current file. This usually means a previous recipe touched the same line and your `old_string` is stale. Re-read the file before editing.
@@ -689,9 +714,9 @@ Skill reports: "All 4 content errors cleared. `check:cws:ship` passes. When read
 
 ## What this skill does NOT do
 
-- Does not run `npm run zip` or `wxt submit`. That's `cws-ship` (future skill).
-- Does not generate screenshots. That's `cws-screens` (future skill).
+- Does not run `npm run zip` or `wxt submit`. That's `cws-ship`.
+- Does not generate screenshots. That's `cws-screens`.
 - Does not handle OAuth secrets, publishing, or version bumps. That's `cws-ship`.
-- Does not modify any file other than `wxt.config.ts` and `entrypoints/welcome/config.ts`.
+- Does not modify any file other than `wxt.config.ts`, `entrypoints/welcome/config.ts`, and `store/listing-description.txt`.
 - Does not add or modify validator rules. Rule ids are public API; changes coordinate with ARCHITECTURE.md.
 - Does not invent privacy policy URLs, repo URLs, or any user-facing content. If the user doesn't provide a value, the recipe skips and the validator stays red.

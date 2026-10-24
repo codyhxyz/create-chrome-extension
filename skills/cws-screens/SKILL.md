@@ -201,7 +201,7 @@ The hero screenshot's headline + subhead are already strong. Reuse them — don'
 
 - List all 7 files written (5 screenshots + 2 tiles).
 - Confirm both `ship-ready-screenshots` (error → clear) and `ship-ready-promo-tiles` (warn → clear) are absent from the latest validator output.
-- Note that the user uploads all seven PNGs manually to the CWS dashboard — there is no API for screenshot or promo-tile upload.
+- Note that the user uploads all seven PNGs to the CWS dashboard by drag-and-drop: image upload is the one dashboard step that is not automated (no API, and `cws-ship`'s `cws-dashboard.mjs` does not upload files). Every text field there, `cws-ship` fills itself.
 - Remind: the first screenshot = thumbnail, the marquee = Featured-placement asset. Both matter.
 
 ---
