@@ -16,16 +16,20 @@
  * Usage:
  *   npm run check:cws              # structural only (CI-safe, default)
  *   npm run check:cws:ship         # structural + submission-readiness
- *   npx tsx scripts/validate-cws.ts [--ship] [--json] [output-dir]
+ *   npx tsx scripts/validate-cws.ts [--ship] [--strict] [--json] [output-dir]
  *
  * Flags:
  *   --ship   enable submission-readiness rules
+ *   --strict warnings block too (exit 1); info findings never block
  *   --json   emit structured findings to stdout for skill consumers
  *            (suppresses human-readable output)
  *
+ * Severities: error (blocks), warn (blocks only with --strict), info
+ * (advisory, never blocks).
+ *
  * Exit codes:
- *   0 — no errors (warnings may still print)
- *   1 — one or more errors
+ *   0 — no errors (and no warnings, with --strict)
+ *   1 — one or more errors (or warnings, with --strict)
  *   2 — validator setup problem (no build output)
  *
  * Rule ids are public API — skills key off `finding.rule`. See ARCHITECTURE.md.
@@ -40,6 +44,7 @@ const ROOT = resolve(import.meta.dirname, '..');
 const ARGS = process.argv.slice(2);
 const SHIP_MODE = ARGS.includes('--ship');
 const JSON_MODE = ARGS.includes('--json');
+const STRICT_MODE = ARGS.includes('--strict');
 const POSITIONAL = ARGS.filter((a) => !a.startsWith('--'));
 const OUTPUT_DIR = POSITIONAL[0] || join(ROOT, '.output', 'chrome-mv3');
 const MANIFEST_PATH = join(OUTPUT_DIR, 'manifest.json');
@@ -85,7 +90,7 @@ const PROXY_HOST_FRAGMENTS = [
 // Permissions used via manifest fields, not chrome.<perm>.* calls.
 const DECLARATIVE_PERMS = new Set(['sidePanel']);
 
-type Severity = 'error' | 'warn';
+type Severity = 'error' | 'warn' | 'info';
 
 interface Finding {
   rule: string;
@@ -532,6 +537,154 @@ function welcomeConfigReadyForSubmission(ctx: Context): Finding[] {
       fix: 'Edit `entrypoints/welcome/config.ts`: set `valueProp`, `activationSurfaces`, `steps`, and real `links` for repo/issues/privacy. Or delete `entrypoints/welcome/` entirely if you don\'t want a welcome flow.',
     },
   ];
+}
+
+// Ship-only: store-facing copy that slipped in from development. Ported from
+// the content checks in `asc validate`. Fields: manifest name (title) and
+// description (summary), every `_locales/*` translation of them, and the
+// detailed description in `store/listing-description.txt`. Matching is
+// word-bounded; TODO/TBD/FIXME match only in uppercase (lowercase "todo" is
+// ordinary product wording, e.g. a todo-list extension), and bare "beta" is
+// ignored. Placeholder / test-wording / other-store findings warn (block with
+// --strict); unfinished-feature wording is info, since roadmap copy can be
+// deliberate.
+const LISTING_DESCRIPTION_PATH = join(ROOT, 'store', 'listing-description.txt');
+
+interface CopyField {
+  field: string;
+  text: string;
+  file: string; // reported in locations
+  edit: string; // where the user fixes it
+}
+
+const COPY_RULES: Array<{
+  rule: string;
+  severity: Severity;
+  pattern: RegExp;
+  what: string;
+  why: string;
+  fix: string;
+}> = [
+  {
+    rule: 'listing-copy-placeholder',
+    severity: 'warn',
+    pattern: /\blorem ipsum\b/gi,
+    what: 'template residue',
+    why: 'Placeholder text in a listing reads as an unfinished extension to users and to reviewers (Yellow Zinc: insufficient listing).',
+    fix: 'Replace it with the real copy, or delete it.',
+  },
+  {
+    rule: 'listing-copy-placeholder',
+    severity: 'warn',
+    pattern: /\b(?:TODO|TBD|FIXME)\b/g,
+    what: 'template residue',
+    why: 'An uppercase TODO/TBD/FIXME in store copy is a note to yourself that shipped.',
+    fix: 'Write the missing copy, or delete the marker.',
+  },
+  {
+    rule: 'listing-copy-test-wording',
+    severity: 'warn',
+    pattern: /\b(?:debug build|for testing purposes)\b/gi,
+    what: 'test wording',
+    why: 'Listing copy describes the shipped extension. Test-build language makes reviewers and users read it as not ready.',
+    fix: 'Remove the testing language. Use the trustedTesters target (`npm run ship -- --target=trustedTesters`) for builds that really are test builds.',
+  },
+  {
+    rule: 'listing-copy-other-store',
+    severity: 'warn',
+    pattern:
+      /\b(?:Firefox add-?ons?|addons\.mozilla\.org|(?:Microsoft )?Edge add-?ons?|microsoftedge\.microsoft\.com|Opera add-?ons?|addons\.opera\.com|Safari (?:web )?extensions? gallery|Mac App Store|App Store|Google Play)\b/gi,
+    what: 'mention of another store',
+    why: 'CWS keyword-spam policy (Yellow Argon) rejects "lists of sites/brands/keywords without substantial added value". Other stores are brands a Chrome user can\'t act on. One plain "also available for Firefox" line is usually fine; store names, store links and lists of browsers are what get flagged.',
+    fix: 'Drop store names and links from the listing; keep at most one short cross-browser line, on your homepage if possible.',
+  },
+  {
+    rule: 'listing-copy-unfinished',
+    severity: 'info',
+    pattern: /\b(?:coming soon|public beta|pre-?release)\b/gi,
+    what: 'unfinished-feature wording',
+    why: 'Fine if deliberate, but reviewers and users read it as a promise, and CWS reviews what the package does today.',
+    fix: 'Keep it only if it is true and intentional; otherwise describe what ships now.',
+  },
+];
+
+function readLocaleMessages(): Array<{ locale: string; messages: Record<string, any> }> {
+  const dir = join(OUTPUT_DIR, '_locales');
+  if (!existsSync(dir)) return [];
+  const out: Array<{ locale: string; messages: Record<string, any> }> = [];
+  for (const locale of readdirSync(dir)) {
+    const file = join(dir, locale, 'messages.json');
+    if (!existsSync(file)) continue;
+    try {
+      out.push({ locale, messages: JSON.parse(readFileSync(file, 'utf8')) });
+    } catch {
+      // A malformed messages.json is a build problem, not a copy problem.
+    }
+  }
+  return out;
+}
+
+function listingCopyFields(ctx: Context): CopyField[] {
+  const fields: CopyField[] = [];
+  const locales = readLocaleMessages();
+  for (const key of ['name', 'description'] as const) {
+    const value = ctx.manifest[key];
+    if (typeof value !== 'string' || !value) continue;
+    const msg = value.match(/^__MSG_(\w+)__$/);
+    if (!msg) {
+      fields.push({ field: `manifest.${key}`, text: value, file: 'wxt.config.ts', edit: '`wxt.config.ts`' });
+      continue;
+    }
+    for (const { locale, messages } of locales) {
+      const entry = Object.entries(messages).find(
+        ([k]) => k.toLowerCase() === msg[1].toLowerCase(),
+      )?.[1];
+      if (entry && typeof entry.message === 'string') {
+        fields.push({
+          field: `manifest.${key} [${locale}]`,
+          text: entry.message,
+          file: `_locales/${locale}/messages.json`,
+          edit: `the "${msg[1]}" message in your ${locale} locale source (built to \`_locales/${locale}/messages.json\`)`,
+        });
+      }
+    }
+  }
+  if (existsSync(LISTING_DESCRIPTION_PATH)) {
+    fields.push({
+      field: 'detailed description',
+      text: readFileSync(LISTING_DESCRIPTION_PATH, 'utf8'),
+      file: relative(ROOT, LISTING_DESCRIPTION_PATH),
+      edit: '`store/listing-description.txt`, then push it with `cws-dashboard.mjs set` (cws-content Recipe E)',
+    });
+  }
+  return fields;
+}
+
+function listingCopyLint(ctx: Context): Finding[] {
+  const findings: Finding[] = [];
+  for (const { field, text, file, edit } of listingCopyFields(ctx)) {
+    for (const r of COPY_RULES) {
+      // One finding per distinct match per field; every line goes in locations.
+      const byMatch = new Map<string, string[]>();
+      for (const m of text.matchAll(r.pattern)) {
+        const key = m[0];
+        const loc = file.endsWith('.txt') ? `${file}:${lineOf(text, m.index ?? 0)}` : file;
+        byMatch.set(key, [...(byMatch.get(key) ?? []), loc]);
+      }
+      for (const [match, locations] of byMatch) {
+        findings.push({
+          rule: r.rule,
+          severity: r.severity,
+          message: `${field}: ${r.what} "${match}"`,
+          why: r.why,
+          source: 'https://developer.chrome.com/docs/webstore/program-policies/listing-requirements',
+          fix: `${r.fix} Edit ${edit}.`,
+          locations: [...new Set(locations)],
+        });
+      }
+    }
+  }
+  return findings;
 }
 
 function isProxyHost(pattern: string): boolean {
@@ -1222,6 +1375,7 @@ const STRUCTURAL_RULES: RuleFn[] = [
 const SHIP_ONLY_RULES: RuleFn[] = [
   listingReadyForSubmission,
   welcomeConfigReadyForSubmission,
+  listingCopyLint,
   listingDrift,
   shipReadyScreenshots,
   shipReadyPromoTiles,
@@ -1246,6 +1400,8 @@ async function main() {
   const findings = results.flat();
   const errors = findings.filter((f) => f.severity === 'error');
   const warnings = findings.filter((f) => f.severity === 'warn');
+  const infos = findings.filter((f) => f.severity === 'info');
+  const blocking = errors.length + (STRICT_MODE ? warnings.length : 0);
 
   if (JSON_MODE) {
     // Stable schema consumed by skills. Additive changes only; do not rename
@@ -1253,20 +1409,23 @@ async function main() {
     const payload = {
       schemaVersion: 1,
       mode,
+      strict: STRICT_MODE,
       rulesRun: rules.length,
       summary: {
         errors: errors.length,
         warnings: warnings.length,
+        info: infos.length,
+        blocking,
       },
       findings,
       docUrl: DOC_URL,
     };
     process.stdout.write(JSON.stringify(payload, null, 2) + '\n');
-    process.exit(errors.length > 0 ? 1 : 0);
+    process.exit(blocking > 0 ? 1 : 0);
   }
 
   console.log(
-    `CWS validator — mode: ${mode} (${rules.length} rule${rules.length === 1 ? '' : 's'})`,
+    `CWS validator — mode: ${mode}${STRICT_MODE ? ' --strict' : ''} (${rules.length} rule${rules.length === 1 ? '' : 's'})`,
   );
 
   if (findings.length === 0) {
@@ -1281,7 +1440,8 @@ async function main() {
   }
 
   for (const f of findings) {
-    const badge = f.severity === 'error' ? '✗ error' : '⚠ warn ';
+    const badge =
+      f.severity === 'error' ? '✗ error' : f.severity === 'warn' ? '⚠ warn ' : 'ℹ info ';
     console.log(`\n${badge} ${f.rule}: ${f.message}`);
     console.log(`  why: ${f.why}`);
     if (f.source) console.log(`  src: ${f.source}`);
@@ -1290,7 +1450,7 @@ async function main() {
   }
 
   console.log(
-    `\n— ${errors.length} error(s), ${warnings.length} warning(s) across ${rules.length} ${mode} rule${rules.length === 1 ? '' : 's'}`,
+    `\n— ${errors.length} error(s), ${warnings.length} warning(s), ${infos.length} info across ${rules.length} ${mode} rule${rules.length === 1 ? '' : 's'}${STRICT_MODE && warnings.length > 0 ? ' (--strict: warnings block)' : ''}`,
   );
   if (!SHIP_MODE && errors.length > 0) {
     console.log(
@@ -1299,7 +1459,7 @@ async function main() {
   }
   console.log(`Full rationale: ${DOC_URL}`);
 
-  process.exit(errors.length > 0 ? 1 : 0);
+  process.exit(blocking > 0 ? 1 : 0);
 }
 
 main().catch((err) => {

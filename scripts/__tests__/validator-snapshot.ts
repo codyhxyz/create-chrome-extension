@@ -5,9 +5,13 @@
  * the current factory state (post-build) in both structural and ship modes,
  * and against the escape-hatch state (video/ removed), asserting:
  *
- *   - Structural: 16 rules, 0 errors.
- *   - Ship (default factory): 22 rules, 6 errors, specific rule-id set.
+ *   - Structural: 17 rules, 0 errors.
+ *   - Ship (default factory): 26 rules, 6 errors, specific error rule-id set,
+ *     no listing-copy findings.
  *   - Ship (video/ removed): 5 errors, ship-ready-video absent.
+ *   - listing-copy-*: fires on residue / test wording / other stores / roadmap
+ *     wording with the right severities, skips lowercase "todo", and
+ *     --strict counts warnings as blocking.
  *
  * Assumes `.output/chrome-mv3/` exists (run `npm run build` first — the npm
  * script `test:validator` handles that).
@@ -19,8 +23,10 @@
 import { execSync } from 'node:child_process';
 import {
   existsSync,
+  mkdirSync,
   readFileSync,
   renameSync,
+  rmSync,
   writeFileSync,
 } from 'node:fs';
 import { resolve } from 'node:path';
@@ -52,8 +58,8 @@ function runExpectingError(args: string): any {
 const structural = runExpectingError('--json');
 assert.equal(
   structural.rulesRun,
-  16,
-  `structural rulesRun: expected 16, got ${structural.rulesRun}`,
+  17,
+  `structural rulesRun: expected 17, got ${structural.rulesRun}`,
 );
 assert.equal(
   structural.summary.errors,
@@ -65,15 +71,15 @@ assert.equal(
   'structural',
   `structural mode: expected "structural", got "${structural.mode}"`,
 );
-console.log(`✓ structural: 16 rules, 0 errors`);
+console.log(`✓ structural: 17 rules, 0 errors`);
 
 // ----- Test 2: ship mode (default factory) has expected 6 errors -----
 
 const ship = runExpectingError('--ship --json');
 assert.equal(
   ship.rulesRun,
-  22,
-  `ship rulesRun: expected 22, got ${ship.rulesRun}`,
+  26,
+  `ship rulesRun: expected 26, got ${ship.rulesRun}`,
 );
 assert.equal(
   ship.summary.errors,
@@ -89,7 +95,10 @@ const EXPECTED_SHIP_RULES = [
   'ship-ready-video',
   'ship-ready-welcome-config',
 ];
+// Errors only: warn-severity rules (ship-ready-promo-tiles) also fire on the
+// factory by design and are not part of the blocking set.
 const actualShipRules = ship.findings
+  .filter((f: any) => f.severity === 'error')
   .map((f: any) => f.rule)
   .sort();
 assert.deepEqual(
@@ -97,7 +106,12 @@ assert.deepEqual(
   EXPECTED_SHIP_RULES,
   `ship rules mismatch:\n  expected ${JSON.stringify(EXPECTED_SHIP_RULES)}\n  got      ${JSON.stringify(actualShipRules)}`,
 );
-console.log(`✓ ship (default): 22 rules, 6 errors, rule-ids match`);
+assert.equal(
+  ship.findings.filter((f: any) => f.rule.startsWith('listing-copy-')).length,
+  0,
+  `listing-copy-* should not fire on the factory template copy`,
+);
+console.log(`✓ ship (default): 26 rules, 6 errors, rule-ids match`);
 
 // ----- Test 3: ship mode with video/ removed (escape hatch) -----
 
@@ -154,7 +168,7 @@ assert.ok('docUrl' in ship, `JSON envelope missing docUrl field`);
 for (const f of ship.findings) {
   assert.ok(typeof f.rule === 'string', `finding missing rule: ${JSON.stringify(f)}`);
   assert.ok(
-    f.severity === 'error' || f.severity === 'warn',
+    f.severity === 'error' || f.severity === 'warn' || f.severity === 'info',
     `finding has invalid severity: ${JSON.stringify(f)}`,
   );
   assert.ok(typeof f.message === 'string', `finding missing message: ${JSON.stringify(f)}`);
@@ -207,6 +221,53 @@ try {
   );
 } finally {
   writeFileSync(manifestPath, originalManifest);
+}
+
+// ----- Test 6: listing-copy lint (manifest + detailed description) -----
+
+const storeDir = resolve(ROOT, 'store');
+const detailedPath = resolve(storeDir, 'listing-description.txt');
+const storeDirExisted = existsSync(storeDir);
+const originalDetailed = existsSync(detailedPath) ? readFileSync(detailedPath, 'utf8') : null;
+const copyPatched = JSON.parse(originalManifest);
+copyPatched.description =
+  'Lorem Ipsum for your tabs. TODO: tagline. A todo list with TODOs. Coming soon to Firefox Add-ons.';
+writeFileSync(manifestPath, JSON.stringify(copyPatched, null, 2));
+mkdirSync(storeDir, { recursive: true });
+writeFileSync(detailedPath, 'A real first line.\nFor testing purposes only. FIXME\nWorks with alphabet soup and beta waves.\n');
+
+try {
+  const copyRun = runExpectingError('--ship --json');
+  const copy = copyRun.findings.filter((f: any) => f.rule.startsWith('listing-copy-'));
+  const has = (rule: string, severity: string, needle: string) =>
+    copy.find((f: any) => f.rule === rule && f.severity === severity && f.message.includes(needle));
+
+  assert.ok(has('listing-copy-placeholder', 'warn', '"Lorem Ipsum"'), 'Lorem ipsum (any case) should warn');
+  assert.ok(has('listing-copy-placeholder', 'warn', 'manifest.description: template residue "TODO"'), 'uppercase TODO should warn');
+  assert.ok(!copy.some((f: any) => /"todo"|"TODOs"/.test(f.message)), 'lowercase todo / TODOs must not match');
+  assert.ok(has('listing-copy-other-store', 'warn', '"Firefox Add-ons"'), 'other-store mention should warn');
+  assert.ok(has('listing-copy-unfinished', 'info', '"Coming soon"'), 'coming soon should be info');
+  assert.ok(!copy.some((f: any) => /beta/i.test(f.message)), 'bare "beta" must not match');
+  const fixme = has('listing-copy-placeholder', 'warn', 'detailed description: template residue "FIXME"');
+  assert.deepEqual(fixme?.locations, ['store/listing-description.txt:2'], 'detailed-description findings carry file:line');
+  assert.ok(has('listing-copy-test-wording', 'warn', '"For testing purposes"'), 'test wording should warn');
+  assert.equal(copyRun.summary.info, copyRun.findings.filter((f: any) => f.severity === 'info').length);
+  assert.equal(copyRun.strict, false);
+  assert.equal(copyRun.summary.blocking, copyRun.summary.errors, 'without --strict only errors block');
+
+  const strictRun = runExpectingError('--ship --strict --json');
+  assert.equal(strictRun.strict, true);
+  assert.equal(
+    strictRun.summary.blocking,
+    strictRun.summary.errors + strictRun.summary.warnings,
+    '--strict: warnings block, info does not',
+  );
+  console.log(`✓ listing-copy: ${copy.length} findings with expected severities; --strict blocks warnings`);
+} finally {
+  writeFileSync(manifestPath, originalManifest);
+  if (originalDetailed !== null) writeFileSync(detailedPath, originalDetailed);
+  else if (storeDirExisted) rmSync(detailedPath, { force: true });
+  else rmSync(storeDir, { recursive: true, force: true });
 }
 
 console.log(`\nAll snapshot assertions passed.`);

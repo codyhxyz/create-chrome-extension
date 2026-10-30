@@ -167,7 +167,9 @@ So "unwritten" is wrong in letter but right in spirit. Your first submission wit
 
 - **(a) Missing/blank icon, title, screenshots, or description → Yellow Zinc rejection.** [Source.](https://developer.chrome.com/docs/webstore/troubleshooting) *Validator: `listing-fields-present`.* [Yellow Zinc specifics.](../sources/extracted/2026-04-17_coditude_yellow-zinc-metadata.md)
 
-- **(a) Keyword stuffing (Yellow Argon):** "unnatural keyword repetition exceeding five times," long lists of sites/locations in the description. [Source.](https://developer.chrome.com/docs/webstore/troubleshooting)
+- **(a) Keyword stuffing (Yellow Argon):** "unnatural keyword repetition exceeding five times," long lists of sites/locations in the description. [Source.](https://developer.chrome.com/docs/webstore/troubleshooting) The policy names "lists of sites/brands/keywords without substantial added value"; other stores (Firefox/Edge/Opera add-ons, App Store, Google Play) are brands a Chrome user can't act on. One "also available for Firefox" line is usually fine. [Policy.](https://developer.chrome.com/docs/webstore/program-policies/listing-requirements) *Validator: `listing-copy-other-store` (warn).*
+
+- **(b) Development leftovers in listing copy** read as an unfinished extension: `Lorem ipsum`, uppercase `TODO` / `TBD` / `FIXME`, "debug build", "for testing purposes". Ported from the App Store Connect CLI's (`asc validate`) content checks. Checked in the title, summary, every `_locales` translation of them, and `store/listing-description.txt`; word-bounded, so a "todo list" extension or "beta waves" never match. *Validator: `listing-copy-placeholder`, `listing-copy-test-wording` (warn; block with `--strict`), `listing-copy-unfinished` ("coming soon", "public beta", "pre-release": info, never blocks).*
 
 - **(a) No misleading title/description/screenshots.** Content must match actual functionality. Red Nickel/Potassium/Silicon family. [Source.](https://developer.chrome.com/docs/webstore/troubleshooting)
 
@@ -301,6 +303,10 @@ tsx scripts/publish-cws.ts   # upload, publish, poll status
 ```
 
 The first failing gate halts the pipeline. `publish-cws` emits state transitions on stdout (`uploading`, `uploaded`, `publishing`, `in-review`, `live`, `rejected`, `failed`, `timeout`). Use `--json` for a machine-readable envelope.
+
+Each terminal state has its own exit code, so CI can branch without parsing output: `0` live, `1` rejected, `2` setup error, `3` failed / upload-failed, `4` auth / network error, `7` in-review (the normal result of a submission; not a failure), `8` timeout (still processing). On 7 or 8, don't re-run `ship`: it would re-upload.
+
+`npm run ship -- --dry-run` (or `CWS_DRY_RUN=1`) runs the whole chain but changes nothing on the store: `publish-cws` exchanges the token, reads the item, and reports what it would upload and publish. Use it to check credentials before a real submission.
 
 ### Secrets setup (opt-in)
 

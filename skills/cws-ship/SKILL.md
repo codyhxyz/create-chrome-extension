@@ -15,12 +15,14 @@ triggers:
   - "user talks about bumping version for a CWS release (`npm version patch`, manifest `version`, `package.json` version)"
   - "user produces or mentions a `*.zip` artifact and talks about uploading it to the Chrome Web Store"
 invokes:
-  - "npm run check:cws:ship -- --json"       # ship-mode validator, JSON envelope
-  - "npx tsx scripts/version-sync.ts --json" # version reconciliation, JSON envelope
-  - "npm run ship"                            # full orchestrated gate (check → version-sync → zip → publish)
-  - "npx tsx scripts/publish-cws.ts --json"   # direct submit+poll (post-mortem / status-only paths)
-  - "npm version patch"                       # offered to user, never run silently
-  - "node <skill-dir>/scripts/cws-dashboard.mjs"  # dashboard-only fields, status, cancel/save/submit (macOS)
+  # mutates: no = read-only, local = files in the repo, remote = the Chrome Web Store
+  - "npm run check:cws:ship -- --json"       # mutates: no. ship-mode validator, JSON envelope
+  - "npx tsx scripts/version-sync.ts --json" # mutates: no. version reconciliation, JSON envelope
+  - "npm run ship -- --dry-run"               # mutates: local (zip). whole chain, CWS reads only
+  - "npm run ship"                            # mutates: REMOTE. full orchestrated gate (check → version-sync → zip → publish)
+  - "npx tsx scripts/publish-cws.ts --json"   # mutates: REMOTE (no with --dry-run). direct submit+poll
+  - "npm version patch"                       # mutates: local. offered to user, never run silently
+  - "node <skill-dir>/scripts/cws-dashboard.mjs"  # mutates: per command, see the table below (macOS)
   - "<skill>cws-content</skill>"              # delegate content rule fixes
   - "<skill>cws-screens</skill>"              # delegate screenshot rule fixes
   - "<skill>cws-video</skill>"                # delegate video rule fixes
@@ -57,17 +59,18 @@ The CWS API uploads and publishes packages. Everything else in the developer das
 
 ```bash
 D="<this skill's base directory>/scripts/cws-dashboard.mjs"
-node "$D" doctor                                   # once per session: macOS, Chrome, JS-from-Apple-Events, signed in
-node "$D" status  <itemId>                         # status ("Pending review", "Published - public", ...), locked?, versions
-node "$D" get     <itemId>                         # description, homepage, support, promo video, blockers
+node "$D" doctor                                   # mutates: no. once per session: macOS, Chrome, JS-from-Apple-Events, signed in
+node "$D" status  <itemId>                         # mutates: no. status ("Pending review", "Published - public", ...), locked?, versions
+node "$D" get     <itemId>                         # mutates: no. description, homepage, support, promo video, blockers
 node "$D" set     <itemId> --description-file f [--homepage url] [--support url] [--cancel-review]
-node "$D" save    <itemId>                         # Save draft, then reloads and reads back what the server kept
-node "$D" submit  <itemId> [--no-auto-publish]     # Submit for review, confirms the dialog, waits for "Pending review"
-node "$D" cancel-review <itemId>
-node "$D" js      <itemId> <edit|package|privacy|distribution> <file|->   # anything else, e.g. Privacy tab checkboxes
+                                                   # mutates: form only (not saved); REMOTE with --cancel-review
+node "$D" save    <itemId>                         # mutates: REMOTE. Save draft, then reloads and reads back what the server kept
+node "$D" submit  <itemId> [--no-auto-publish]     # mutates: REMOTE. Submit for review, confirms the dialog, waits for "Pending review"
+node "$D" cancel-review <itemId>                   # mutates: REMOTE
+node "$D" js      <itemId> <edit|package|privacy|distribution> <file|->   # mutates: assume REMOTE. anything else, e.g. Privacy tab checkboxes
 ```
 
-Every command prints one JSON object (`ok`, plus `error` and `hint` on failure).
+Every command prints one JSON object (`ok`, plus `error` and `hint` on failure). Add `--dry-run` (or `CWS_DRY_RUN=1`) to any mutating command to preview it: `set` reports the field diff and whether it would cancel a review, `save` / `submit` report whether the button is enabled (and `submit` the blockers), `cancel-review` reports whether the item is in review. Nothing is filled or clicked. `js --dry-run` doesn't run the snippet at all.
 
 **Rules.**
 - **Never tell the user to "open the dashboard and …" for anything this script covers.** Run it. Handing dashboard work back is the failure mode this section exists to prevent.
@@ -128,15 +131,18 @@ Parse the JSON envelope. Schema (`schemaVersion: 1`):
   "schemaVersion": 1,
   "mode": "ship",
   "rulesRun": 17,
-  "summary": { "errors": N, "warnings": M },
+  "strict": false,
+  "summary": { "errors": N, "warnings": M, "info": I, "blocking": B },
   "findings": [
-    { "rule": "<rule-id>", "severity": "error|warn", "message": "...", "why": "...", "source": "...", "fix": "...", "locations": [] }
+    { "rule": "<rule-id>", "severity": "error|warn|info", "message": "...", "why": "...", "source": "...", "fix": "...", "locations": [] }
   ],
   "docUrl": "docs/03-cws-best-practices.md"
 }
 ```
 
 **Always branch on `finding.rule`. Never branch on `finding.message`** — messages are for humans; rule ids are the public API the skill keys off.
+
+`error` blocks. `warn` blocks only with `--strict` (CI); `summary.blocking` is the count that decides the exit code. `info` never blocks.
 
 ### A.2 Route each error finding
 
@@ -185,11 +191,24 @@ Let the user pick (a)/(b)/(c) explicitly before proceeding. If they pick (b), ru
 
 Same treatment for `listing-drift` on `description` if it fires.
 
-### A.4 Warnings other than `listing-drift`
+### A.4 Listing-copy findings (`listing-copy-*`)
+
+These check the title, summary, their `_locales` translations, and `store/listing-description.txt`:
+
+| Rule id | Severity | Means |
+|---|---|---|
+| `listing-copy-placeholder` | warn | `Lorem ipsum`, or uppercase `TODO` / `TBD` / `FIXME`, in store copy |
+| `listing-copy-test-wording` | warn | "debug build", "for testing purposes" |
+| `listing-copy-other-store` | warn | Firefox / Edge / Opera add-ons, App Store, Google Play: keyword-spam risk (Yellow Argon) |
+| `listing-copy-unfinished` | info | "coming soon", "public beta", "pre-release" |
+
+They don't block, but unlike the A.5 warnings they are almost always mistakes, and the fix is a one-line copy edit. List them with their `locations`, and offer to hand them to `cws-content` before Phase C. For `listing-copy-unfinished`, just mention it: roadmap wording can be deliberate.
+
+### A.5 Warnings other than `listing-drift` and `listing-copy-*`
 
 Warnings (`sensitive-permission-declared`, `sw-keepalive-hack`, `war-matches-breadth`, `content-script-main-world`, `optional-host-suggestion`, `sw-listener-top-level`, etc.) do not block submission. Surface them in a "heads up" section before Phase C but do not prompt the user to fix them. They may deliberately be accepting these costs (e.g. they need `tabs` and have a justification ready for the dashboard).
 
-### A.5 Re-run loop
+### A.6 Re-run loop
 
 After any delegation, re-run `npm run check:cws:ship -- --json`. Keep looping Phase A until `summary.errors === 0`. Only then proceed to Phase B.
 
@@ -288,6 +307,8 @@ About to submit:
 Confirm with `yes` to run `npm run ship`. Type anything else to stop.
 ```
 
+To check the CWS credentials before asking, run `npm run ship -- --dry-run` first. It runs the whole chain, but `publish-cws` only exchanges the token and reads the item, then reports what it would upload. It exits 0 on success and 4 on an auth error. It still builds the zip locally.
+
 If either promo tile is `✗`, append a single-line note before the confirm prompt:
 
 ```
@@ -329,18 +350,24 @@ This is the single orchestrated command. It runs:
 
 First halt wins. If something fails at step 1 or 2 despite Phases A and B, that's drift between invocations — re-run the respective phase.
 
+The exit code of `npm run ship` is `publish-cws`'s exit code, one per terminal state (table below). **Exit 7 is the normal outcome of a successful submission.** npm prints "Lifecycle script `ship` failed" for any non-zero code; ignore that and branch on the state.
+
 ### D.2 Parse publish-cws terminal state
 
-`publish-cws` emits structured transitions on stdout. In its final message (or when run with `--json`), the terminal `state` is one of:
+`publish-cws` emits structured transitions on stdout. In its final message (or when run with `--json`), the terminal `state` is one of the following. The JSON envelope also carries `exitCode`.
 
-| State | Meaning | Branch |
-|---|---|---|
-| `live` | Published. Visible on CWS. | D.3 (celebrate) |
-| `in-review` | Accepted for review by CWS. Human review pending. | D.4 (wait) |
-| `rejected` | CWS rejected the submission. | D.5 (rejection-recovery recipes) |
-| `failed` | `publish` call returned a non-terminal error (quota, auth, API error). | D.6 (retry) |
-| `timeout` | Polling exceeded the timeout window without reaching a terminal state. | D.7 (status check) |
-| `upload-failed` | The zip upload itself failed (usually version-too-low or file corruption). | D.8 (upload-recovery) |
+| State | Exit | Meaning | Branch |
+|---|---|---|---|
+| `live` | 0 | Published. Visible on CWS. | D.3 (celebrate) |
+| `in-review` | 7 | Accepted for review by CWS. Human review pending. Not a failure. | D.4 (wait) |
+| `rejected` | 1 | CWS rejected the submission. | D.5 (rejection-recovery recipes) |
+| `failed` | 3 | `publish` call returned a non-terminal error (quota, auth, API error). | D.6 (retry) |
+| `timeout` | 8 | Polling exceeded the timeout window without reaching a terminal state. Not a failure. | D.7 (status check) |
+| `upload-failed` | 3 | The zip upload itself failed (usually version-too-low or file corruption). | D.8 (upload-recovery) |
+| `error` | 4 | Auth, network, or an unexpected exception before a terminal state. | D.6 (retry) |
+| `skipped` / `dry-run` | 0 | No secrets configured, or `--dry-run`: nothing was uploaded. | Manual fallback / Phase C |
+
+Exit 2 means a setup error (no zip). Codes 7 and 8 both mean "pending": never re-run `npm run ship` on them, since that re-uploads.
 
 ### D.3 `live`
 

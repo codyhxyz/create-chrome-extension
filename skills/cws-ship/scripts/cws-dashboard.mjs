@@ -20,12 +20,19 @@
 //
 // `set` only fills the form. Follow it with `save`, then `submit` when the
 // change should go live. Nothing here uploads a package; use the CWS API for that.
+//
+// Read-only: doctor, status, get. Mutating: set (with --cancel-review), save,
+// submit, cancel-review, js (arbitrary code, assume it mutates). Add --dry-run
+// (or CWS_DRY_RUN=1) to any mutating command to read the page and report what
+// it would do (diff, button enabled?, blockers) without filling or clicking.
 
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
 const DEVCONSOLE = "https://chrome.google.com/webstore/devconsole";
-const [, , cmd, itemId, ...rest] = process.argv;
+const [, , cmd, itemId, ...argv] = process.argv;
+const DRY_RUN = argv.includes("--dry-run") || /^(1|true|yes)$/i.test(process.env.CWS_DRY_RUN || "");
+const rest = argv.filter((a) => a !== "--dry-run");
 
 function out(obj, code = 0) {
   process.stdout.write(JSON.stringify(obj, null, 2) + "\n");
@@ -219,6 +226,23 @@ async function main() {
 
       await gotoItem("edit");
       let l = readListing();
+      if (DRY_RUN) {
+        if (l.locked && !rest.includes("--cancel-review")) {
+          fail("listing-locked", `Status "${l.status}": a real run would stop here. Add --cancel-review to cancel the review first.`);
+        }
+        const change = (from, to) => (to === null || to === undefined ? undefined : { from, to, changes: from !== to });
+        out({
+          ok: true, dryRun: true, itemId, status: l.status,
+          wouldCancelReview: !!l.locked,
+          changes: {
+            description: description === null ? undefined
+              : { fromLength: (l.description || "").length, toLength: description.length, changes: (l.description || "") !== description },
+            homepage: change(l.homepage, homepage),
+            support: change(l.support, support),
+          },
+          note: "Nothing was filled or clicked.",
+        });
+      }
       if (l.locked) {
         if (!rest.includes("--cancel-review")) {
           fail("listing-locked", `Status "${l.status}": the listing can't be edited while in review. Re-run with --cancel-review (the uploaded package stays in the draft), then save and submit again.`);
@@ -242,11 +266,22 @@ async function main() {
 
     case "cancel-review": {
       await gotoItem("edit");
+      if (DRY_RUN) {
+        const l = readListing();
+        out({ ok: true, dryRun: true, itemId, status: l.status, inReview: !!l.locked,
+          would: l.locked ? "cancel the review (the uploaded package stays in the draft)" : "nothing: the item is not in review" });
+      }
       out({ ok: true, itemId, status: await cancelReview() });
     }
 
     case "save": {
       await gotoItem("edit");
+      if (DRY_RUN) {
+        const s = jsJSON(MATCH(), `${H}
+          const b = $btn('Save draft'); return { status: $status(), saveEnabled: !!b && !b.disabled };`);
+        out({ ok: true, dryRun: true, itemId, ...s,
+          would: s.saveEnabled ? "click Save draft" : "fail: Save draft is disabled (nothing changed, or the item is in review)" });
+      }
       const r = jsJSON(MATCH(), `${H}
         const b = $btn('Save draft'); if (!b) return { error: 'no Save draft button' };
         if (b.disabled) return { error: 'Save draft is disabled (nothing changed, or the item is in review)' };
@@ -262,6 +297,14 @@ async function main() {
     case "submit": {
       await gotoItem("edit");
       const auto = !rest.includes("--no-auto-publish");
+      if (DRY_RUN) {
+        const s = jsJSON(MATCH(), `${H}
+          const b = $btn('Submit for review');
+          return { status: $status(), submitEnabled: !!b && !b.disabled,
+            blockers: b && b.disabled ? [...document.body.innerText.matchAll(/[^\\n]*(?:required|must|missing|may not)[^\\n]*/gi)].map(m=>m[0]).slice(0,6) : [] };`);
+        out({ ok: s.submitEnabled, dryRun: true, itemId, autoPublish: auto, ...s,
+          would: s.submitEnabled ? "click Submit for review and confirm the dialog" : "fail: Submit for review is disabled" }, s.submitEnabled ? 0 : 1);
+      }
       const r = jsJSON(MATCH(), `${H}
         const b = $btn('Submit for review'); if (!b) return { error: 'no Submit for review button' };
         if (b.disabled) return { error: 'Submit for review is disabled', blockers: [...document.body.innerText.matchAll(/[^\\n]*(?:required|must|missing|may not)[^\\n]*/gi)].map(m=>m[0]).slice(0,6) };
@@ -283,6 +326,10 @@ async function main() {
     case "js": {
       const [section, file] = rest;
       if (!section || !file) fail("usage", "js <itemId> <edit|package|privacy|distribution> <file|->");
+      if (DRY_RUN) {
+        out({ ok: true, dryRun: true, itemId, would: `run ${file === "-" ? "stdin" : file} on the ${section} tab`,
+          note: "js runs arbitrary code, so --dry-run does not execute it, not even reads." });
+      }
       await gotoItem(section);
       const code = readFileSync(file === "-" ? 0 : file, "utf8");
       out({ ok: true, itemId, result: js(MATCH(), `${H}\n(function(){${code}\n})()`) });

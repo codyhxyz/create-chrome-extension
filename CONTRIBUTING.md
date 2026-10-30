@@ -13,7 +13,8 @@ Short version: read [ARCHITECTURE.md](ARCHITECTURE.md) before adding a feature. 
 
 ```bash
 npm run compile           # TypeScript green
-npm run check:cws         # structural validator green (13 rules)
+npm run check:cws         # structural validator green (17 rules)
+npm run test:validator    # validator snapshot test
 ```
 
 Both must pass. CI runs these on every push.

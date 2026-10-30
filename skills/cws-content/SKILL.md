@@ -6,6 +6,7 @@ triggers:
   - "user says `npm run check:cws:ship` is red"
   - "user asks `help me write the Chrome Web Store listing`"
   - "validator reports listing-ready-name / listing-ready-description / ship-ready-optional-host / ship-ready-welcome-config errors"
+  - "validator reports listing-copy-placeholder / listing-copy-test-wording / listing-copy-other-store / listing-copy-unfinished findings"
   - "user wants to draft the welcome page copy"
   - "user asks for listing / description / name / value-prop help for their Chrome extension"
 invokes:
@@ -60,6 +61,8 @@ Rule ids are public API — **always branch on `finding.rule`, never on `finding
   2. `listing-ready-description` → Recipe B (description drafting).
   3. `ship-ready-optional-host` → Recipe C (origins elicitation, **writes to two files in lockstep**).
   4. `ship-ready-welcome-config` → Recipe D (welcome-config walk-through).
+
+- Separately, any `listing-copy-*` finding (warn or info, never blocking) → Recipe F, after the queue above.
 
 After each recipe that successfully writes a file, **re-run the validator** (`npm run check:cws:ship -- --json`) and confirm the relevant rule id no longer appears in `findings`. If it still appears, something in the write went wrong; show the user the output and ask for guidance rather than guessing.
 
@@ -720,3 +723,18 @@ Then hand off to `cws-ship` to `submit` (or `npm run ship` if a new package is g
 - Does not modify any file other than `wxt.config.ts`, `entrypoints/welcome/config.ts`, and `store/listing-description.txt`.
 - Does not add or modify validator rules. Rule ids are public API; changes coordinate with ARCHITECTURE.md.
 - Does not invent privacy policy URLs, repo URLs, or any user-facing content. If the user doesn't provide a value, the recipe skips and the validator stays red.
+
+---
+
+## Recipe F — `listing-copy-*` (residue, test wording, other stores)
+
+**Rules:** `listing-copy-placeholder` (`Lorem ipsum`; uppercase `TODO` / `TBD` / `FIXME`), `listing-copy-test-wording` ("debug build", "for testing purposes"), `listing-copy-other-store` (Firefox / Edge / Opera add-ons, App Store, Google Play), all `warn`; `listing-copy-unfinished` ("coming soon", "public beta", "pre-release"), `info`.
+
+**File write target:** whatever the finding's `locations` name: `wxt.config.ts` for the title and summary, the locale source for a `[<locale>]` field, `store/listing-description.txt` (with line number) for the detailed description.
+
+**What to do:**
+- Placeholder or test wording: show the sentence it sits in and propose a replacement (or deletion). If the marker stands for copy that doesn't exist yet, that's an interview, not a guess: ask for it as in Recipes A and B.
+- Other store: cut the store name or link. If the user wants cross-browser availability on the page, keep one plain line ("Also available for Firefox") and drop the rest. Lists of browsers or stores are what trip Yellow Argon.
+- Unfinished: ask once whether it's deliberate. If it is, leave it. If not, rewrite it to describe what ships today.
+
+Re-run `npm run check:cws:ship -- --json` and confirm the finding is gone. If the detailed description changed and the item is already live, push it with `cws-dashboard.mjs set` as in Recipe E.
